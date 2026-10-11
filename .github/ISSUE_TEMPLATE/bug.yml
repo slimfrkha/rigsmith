@@ -1,0 +1,27 @@
+name: Bug
+description: Something rigsmith did (or didn't do) that it shouldn't have
+labels: [bug]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened, and what did you expect?
+    validations: {required: true}
+  - type: input
+    id: command
+    attributes:
+      label: Command you ran
+      placeholder: rigsmith install -p standard -y
+    validations: {required: true}
+  - type: input
+    id: platform
+    attributes:
+      label: Platform (the last line of `rigsmith scan`)
+      placeholder: macos 15.1 (arm64)
+    validations: {required: true}
+  - type: textarea
+    id: log
+    attributes:
+      label: Relevant log lines
+      description: From ~/.local/state/rigsmith/logs/ (check for anything private first)
+      render: text

@@ -435,6 +435,8 @@ Curation decisions vs the legacy scripts:
 - oh-my-zsh dropped; zinit loads the needed OMZ plugins (`zinit snippet OMZP::git`).
 - krew `ctx`/`ns` dropped (duplicate kubectx).
 - Duplicate `extract` dropped (OMZ plugin vs custom function).
+- tfsec → trivy (tfsec is deprecated in favor of trivy); krew `score` → `kube-score`.
+- thefuck kept (its successor pay-respects isn't in Homebrew core yet).
 - Commented-out Go/Rust/C++ extensions not ported; future `go`/`rust` sections.
 
 ---
@@ -481,18 +483,22 @@ rigsmith/
     pull_request_template.md    help text, in reference.yaml, snippet phase, integration vs opinion split, tested on mac/linux
     dependabot.yml              pip + github-actions
   src/rigsmith/
-    cli.py                      typer commands
-    model.py                    Artifact, Question, Backend base, registries
-    backends.py                 Brew, Cask, Apt, Krew, VSCodeExt, UvTool, Script, GitClone, NerdFont
-    config.py                   load, resolve, validate
-    plan.py                     filters, roles, questions → selection; toposort; diff
-    runner.py                   execute, sudo keepalive, logs, state
-    shell.py                    ~/.zshrc block + shell.d
-    tui.py                      questionnaire, picker, confirm
+    cli.py                      typer commands, plan report
+    model.py                    Platform, Artifact, Question, Backend base, registries
+    backends.py                 Brew, Cask, Apt, Script, GitClone, Krew, VSCodeExt, UvTool, NerdFont
+    config.py                   load, resolve, validate, fork (for init)
+    plan.py                     filters, questions, roles, dependency closure, toposort
+    effects.py                  package / file / login-shell / post-install effects
+    settings.py                 VS Code settings.json (JSONC) and git config effects
+    state.py                    receipts (undo log)
+    runner.py                   install / uninstall from receipts, sudo keepalive, logs, status
+    shell.py                    ~/.zshrc block, init.zsh, prefs, overlap warnings
+    tui.py                      questionnaire, picker (help, search, init mode), confirm
     library/                    one module per section
       snippets/                 *.zsh
-      files/                    p10k.zsh, catppuccin.itermcolors, vscode setting fragments
-  tests/
+      files/                    Catppuccin-Mocha.itermcolors
+  scripts/check_sources.py      every brew/cask name and VS Code extension id exists
+  tests/                        unit, library lint, CLI, TUI (pilot); e2e/ for CI only
 ```
 
 ---
@@ -510,8 +516,9 @@ rigsmith/
    `uninstall -y` → `scan` (**managed** artifacts ✗, pre-existing ones untouched, `~/.zshrc` byte-identical to the
    original). Runners ship brew, git, jq…, so "all ✗" would be wrong.
    Plus `install -c config/example.yaml -y`. Standard/comprehensive run nightly.
-4. **Brew bootstrap:** runners already have brew and can't exercise it. A nightly job runs on clean VMs
-   (Tart for macOS, a bare ubuntu image for Linux).
+4. **Brew bootstrap:** the Ubuntu job runs in a bare `ubuntu:24.04` container, so it installs Homebrew from
+   scratch on every run. Hosted macOS runners ship Homebrew, so the macOS bootstrap path is only exercised
+   on a clean VM (e.g. Tart) by hand before releases.
 
 ---
 

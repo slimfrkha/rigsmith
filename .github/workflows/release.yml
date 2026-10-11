@@ -1,0 +1,23 @@
+name: release
+on:
+  push:
+    tags: ["v*"]
+
+jobs:
+  pypi:
+    # Needs a PyPI "trusted publisher" for this repo + workflow (no API token stored anywhere).
+    runs-on: ubuntu-latest
+    environment: pypi
+    permissions:
+      id-token: write
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+      - name: tag matches pyproject version
+        run: test "v$(uv version --short)" = "$GITHUB_REF_NAME"
+      - run: uv build
+      - uses: pypa/gh-action-pypi-publish@release/v1
+      - run: gh release create "$GITHUB_REF_NAME" dist/* --generate-notes
+        env:
+          GH_TOKEN: ${{ github.token }}

@@ -1,0 +1,39 @@
+name: New artifact
+description: Propose a tool for the built-in library
+labels: [artifact]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        The built-in library takes **widely used, maintained** tools that install with Homebrew on macOS
+        and Homebrew or apt on Linux (or are clearly marked mac-only / linux-only). Niche tools are better as
+        a `custom:` entry in your own config.
+  - type: input
+    id: tool
+    attributes: {label: Tool and homepage}
+    validations: {required: true}
+  - type: textarea
+    id: why
+    attributes:
+      label: Why it belongs (who uses it, what it replaces)
+    validations: {required: true}
+  - type: input
+    id: sources
+    attributes:
+      label: Install names
+      placeholder: "brew: eza · cask: — · apt: eza · VS Code: —"
+    validations: {required: true}
+  - type: input
+    id: place
+    attributes:
+      label: Section / subsection / profile
+      placeholder: cli / files / minimal
+  - type: input
+    id: role
+    attributes:
+      label: Role, if it competes with an existing tool
+      placeholder: "prompt (alternative to p10k / starship)"
+  - type: textarea
+    id: config
+    attributes:
+      label: Config it needs to work (integration) vs optional taste (a separate artifact)

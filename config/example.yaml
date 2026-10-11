@@ -1,0 +1,218 @@
+# The author's work setup: a platform/GCP engineer who lives in zsh, k9s and VS Code.
+# A curated fork of reference.yaml, pinned so `rigsmith install -c example -y` is reproducible.
+profiles: [minimal, standard, comprehensive]
+
+sections:
+  system:
+    bootstrap:
+      homebrew: minimal
+      apt-base: minimal
+
+  shell:
+    core:
+      zsh: minimal
+      zinit: minimal
+    prompt:
+      p10k: minimal
+    plugins:
+      zsh-autosuggestions: minimal
+      zsh-syntax-highlighting: minimal
+      zsh-completions: minimal
+      zsh-history-substring-search: standard
+      omz-plugins: standard
+    history:
+      atuin: minimal
+    helpers:
+      shell-aliases: minimal
+      shell-functions: minimal
+      shell-extras: standard
+
+  terminal:
+    emulator:
+      iterm2: minimal
+    fonts:
+      meslo-nf: minimal
+      jetbrains-nf: standard
+      fira-nf: comprehensive
+    theme:
+      catppuccin-iterm: minimal
+
+  cli:
+    files:
+      eza: minimal
+      eza-aliases: minimal
+      tree: minimal
+      yazi: standard
+    search:
+      ripgrep: minimal
+      ripgrep-aliases: minimal
+      fd: minimal
+      fd-aliases: minimal
+      fzf: minimal
+    view-edit:
+      bat: minimal
+      bat-aliases: minimal
+      sd: standard
+      micro: minimal
+    navigation:
+      zoxide: minimal
+    data:
+      jq: minimal
+      yq: minimal
+    system:
+      htop: standard
+      bottom: standard
+      dust: standard
+      duf: standard
+      procs: standard
+      sys-aliases: standard
+    network:
+      httpie: standard
+      wget: minimal
+    docs:
+      tldr: minimal
+    misc:
+      watch: standard
+      tokei: comprehensive
+      hyperfine: comprehensive
+      thefuck: comprehensive
+
+  git:
+    core:
+      git: minimal
+      gh: minimal
+      git-aliases: minimal
+      git-defaults: minimal
+    ui:
+      lazygit: minimal
+      gitlens-ext: standard
+      git-graph-ext: standard
+      github-pr-ext: standard
+    diff:
+      delta: minimal
+
+  python:
+    tooling:
+      uv: minimal
+      python: minimal
+      ruff: minimal
+      ty: minimal
+      python-aliases: minimal
+    vscode:
+      python-ext: minimal
+      debugpy-ext: minimal
+      ruff-ext: minimal
+      ty-ext: minimal
+      jupyter-ext: standard
+      autodocstring-ext: standard
+      python-indent-ext: standard
+
+  containers:
+    runtime:
+      colima: minimal
+    tools:
+      docker-cli: minimal
+      docker-aliases: minimal
+      dive: comprehensive
+      docker-ext: standard
+
+  kubernetes:
+    core:
+      kubectl: minimal
+      kubectx: minimal
+      k8s-aliases: minimal
+      helm: minimal
+      helm-aliases: minimal
+      k8s-ext: standard
+      helm-ext: standard
+    ui:
+      k9s: minimal
+    logs:
+      stern: minimal
+    plugins:
+      krew: standard
+      krew-neat: standard
+      krew-tree: standard
+      krew-images: standard
+      krew-get-all: standard
+      krew-whoami: standard
+    validate:
+      kubeconform: comprehensive
+      popeye: comprehensive
+      kube-score: comprehensive
+    local:
+      kind: standard
+    gitops:
+      argocd: comprehensive
+
+  cloud:
+    gcp:
+      gcloud: minimal
+      gke-auth-plugin: minimal
+      gcp-aliases: minimal
+      cloudcode-ext: comprehensive
+
+  iac:
+    terraform:
+      terraform: minimal
+      tflint: standard
+      terraform-aliases: minimal
+      terraform-ext: standard
+      terragrunt: standard
+      trivy: standard
+      infracost: standard
+
+  editor:
+    vscode:
+      vscode: minimal
+      vscode-settings: minimal
+      vscode-nerd-fonts: standard
+      catppuccin-vscode: minimal
+      catppuccin-icons: minimal
+      errorlens: minimal
+      todo-tree: standard
+      better-comments: standard
+      path-intellisense: standard
+      project-manager: standard
+      bookmarks: standard
+      advanced-new-file: standard
+      fileutils: standard
+    config-files:
+      yaml-ext: minimal
+      toml-ext: minimal
+      dotenv-ext: standard
+    remote:
+      remote-ssh: standard
+      dev-containers: standard
+
+  data:
+    files:
+      rainbow-csv: standard
+
+  docs:
+    markdown:
+      markdown-all-in-one: standard
+      markdownlint: standard
+
+  fun:
+    terminal:
+      fastfetch: comprehensive
+      cmatrix: comprehensive
+      lolcat: comprehensive
+      figlet: comprehensive
+      cowsay: comprehensive
+      pipes-sh: comprehensive
+      sl: comprehensive
+      fun-aliases: comprehensive
+
+answers:
+  profile: standard
+  prompt: p10k
+  editor: micro
+  container-runtime: colima
+  terminal: iterm2
+  icons: "yes"
+  aliases: "yes"
+  tui: "yes"
+  fun: "yes"
+  theme: catppuccin
