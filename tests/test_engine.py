@@ -119,3 +119,16 @@ def test_resolve_presets_and_user_config(home):
     assert config.resolve("reference").name == "reference.yaml"
     with pytest.raises(ConfigError):
         config.resolve("does-not-exist")
+
+
+def test_apt_uninstall_keeps_packages_that_existed_before(monkeypatch):
+    from rigsmith import backends
+
+    calls = []
+    monkeypatch.setattr(backends, "_dpkg", lambda: frozenset({"curl", "git"}))
+    monkeypatch.setattr(backends, "run", lambda argv, **kw: calls.append(argv))
+    apt = Apt("build-essential curl git")
+    snap = apt.snapshot()
+    assert snap == ["curl", "git"]
+    apt.uninstall(snap)
+    assert calls == [["apt-get", "remove", "-y", "-q", "build-essential"]]

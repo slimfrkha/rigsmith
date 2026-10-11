@@ -84,12 +84,14 @@ class Apt(Backend):
             _apt_updated = True
         run(["apt-get", "install", "-y", "-q", *self.pkg.split()], sudo=True, env=env)
 
+    def snapshot(self) -> Any:
+        return [p for p in self.pkg.split() if p in _dpkg()]
+
     def uninstall(self, snapshot: Any = None) -> None:
-        run(
-            ["apt-get", "remove", "-y", "-q", *self.pkg.split()],
-            sudo=True,
-            env={"DEBIAN_FRONTEND": "noninteractive"},
-        )
+        mine = [p for p in self.pkg.split() if p not in (snapshot or [])]
+        if mine:
+            env = {"DEBIAN_FRONTEND": "noninteractive"}
+            run(["apt-get", "remove", "-y", "-q", *mine], sudo=True, env=env)
 
 
 @backend("script")
