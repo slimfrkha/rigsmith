@@ -47,7 +47,5 @@ class State:
     def save(self) -> None:
         self.path.parent.mkdir(parents=True, exist_ok=True)
         tmp = self.path.with_suffix(".tmp")
-        tmp.write_text(
-            json.dumps({"version": 1, "receipts": [asdict(r) for r in self.receipts.values()]}, indent=1)
-        )
+        tmp.write_text(json.dumps({"version": 1, "receipts": [asdict(r) for r in self.receipts.values()]}, indent=1))
         os.replace(tmp, self.path)

@@ -23,9 +23,7 @@ Zsh(
 Artifact(
     id="zinit",
     help="Fast zsh plugin manager (turbo mode). Loads plugins and oh-my-zsh snippets without oh-my-zsh.",
-    sources=[
-        GitClone("https://github.com/zdharma-continuum/zinit.git", dest="~/.local/share/zinit/zinit.git")
-    ],
+    sources=[GitClone("https://github.com/zdharma-continuum/zinit.git", dest="~/.local/share/zinit/zinit.git")],
     shell=Snippet("zinit.zsh", 20),
     requires=["git"],
     conflicts=[r"zinit\.zsh", r"oh-my-zsh\.sh"],

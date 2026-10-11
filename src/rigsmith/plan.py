@@ -62,11 +62,10 @@ class Plan:
     env: dict[str, str]
     skipped: dict[str, str] = field(default_factory=dict)  # id -> why
     warnings: list[str] = field(default_factory=list)
+    replace: list[str] = field(default_factory=list)  # installed role providers to uninstall afterwards
 
 
-def resolve_profile(
-    cfg: Config, profile: str | None, ids: list[str] | tuple[str, ...], answers: dict[str, str]
-):
+def resolve_profile(cfg: Config, profile: str | None, ids: list[str] | tuple[str, ...], answers: dict[str, str]):
     """-p, else answers.profile, else the first profile. Explicit ids alone imply no cutoff."""
     if profile:
         return profile
@@ -90,11 +89,7 @@ def build(
     prof = resolve_profile(cfg, profile, ids, answers)
     if prof:
         answers["profile"] = prof
-    chosen = (
-        picked
-        if picked is not None
-        else [e.id for e in select(cfg, ids=ids, profile=prof, sections=sections)]
-    )
+    chosen = picked if picked is not None else [e.id for e in select(cfg, ids=ids, profile=prof, sections=sections)]
     plan = Plan(order=[], reasons={}, answers=answers, env={})
 
     # questions: env prefs + excluded tags (only when the picker didn't already decide)
@@ -118,9 +113,7 @@ def build(
             if wanted and wanted != keep[0]:
                 plan.warnings.append(f"{role}: keeping installed {keep[0]} (answer was {wanted})")
             if len(installed) > 1:
-                plan.warnings.append(
-                    f"{role}: several providers installed ({', '.join(installed)}), left alone"
-                )
+                plan.warnings.append(f"{role}: several providers installed ({', '.join(installed)}), left alone")
         else:
             keep = [wanted if wanted in cands else cands[0]]
         if keep:

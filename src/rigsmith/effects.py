@@ -105,9 +105,7 @@ class FileEffect(Effect):
 
 def snippet_effects(art: Artifact) -> list[Effect]:
     return [
-        FileEffect(
-            art.id, shell_d() / f"{s.phase:02d}-{art.id}.zsh", (LIBRARY / "snippets" / s.name).read_bytes()
-        )
+        FileEffect(art.id, shell_d() / f"{s.phase:02d}-{art.id}.zsh", (LIBRARY / "snippets" / s.name).read_bytes())
         for s in art.snippets
     ]
 

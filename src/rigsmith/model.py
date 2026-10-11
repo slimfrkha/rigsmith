@@ -135,11 +135,7 @@ class Backend:
         return True
 
     def matches(self, p: Platform) -> bool:
-        return (
-            self.os in (None, p.os)
-            and self.arch in (None, p.arch)
-            and (not self.distro or p.matches(self.distro))
-        )
+        return self.os in (None, p.os) and self.arch in (None, p.arch) and (not self.distro or p.matches(self.distro))
 
     def is_installed(self) -> bool:
         raise NotImplementedError

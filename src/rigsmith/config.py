@@ -70,9 +70,7 @@ def resolve(source: str | None) -> Path:
     for cand in (bundled_dir() / f"{source}.yaml", bundled_dir() / "presets" / f"{source}.yaml"):
         if cand.is_file():
             return cand
-    raise ConfigError(
-        f"no config file or preset named {source!r} (presets: {', '.join(presets()) or 'none'})"
-    )
+    raise ConfigError(f"no config file or preset named {source!r} (presets: {', '.join(presets()) or 'none'})")
 
 
 def yaml() -> YAML:

@@ -18,22 +18,16 @@ from rigsmith.state import NOOP, State
 app = typer.Typer(no_args_is_help=True, add_completion=False, help=__doc__)
 console = Console(highlight=False)
 
-Ids = Annotated[
-    list[str] | None, typer.Argument(help="Artifact ids (AND with the filters).", show_default=False)
-]
+Ids = Annotated[list[str] | None, typer.Argument(help="Artifact ids (AND with the filters).", show_default=False)]
 ConfigOpt = Annotated[str | None, typer.Option("-c", "--config", help="Config file or preset name.")]
 ProfileOpt = Annotated[str | None, typer.Option("-p", "--profile", help="Profile cutoff (cumulative).")]
 SectionOpt = Annotated[
     list[str] | None,
     typer.Option("-s", "--section", help="SECTION or SECTION/SUB, repeatable.", show_default=False),
 ]
-YesOpt = Annotated[
-    bool, typer.Option("-y", "--yes", help="Non-interactive: defaults, no picker, no confirm.")
-]
+YesOpt = Annotated[bool, typer.Option("-y", "--yes", help="Non-interactive: defaults, no picker, no confirm.")]
 DryOpt = Annotated[bool, typer.Option("--dry-run", help="Show the plan and exit.")]
-UnsupportedOpt = Annotated[
-    bool, typer.Option("--unsupported", help="Run on a platform rigsmith doesn't support.")
-]
+UnsupportedOpt = Annotated[bool, typer.Option("--unsupported", help="Run on a platform rigsmith doesn't support.")]
 
 
 @app.callback()
@@ -82,9 +76,7 @@ def scan(
     profile: ProfileOpt = None,
     section: SectionOpt = None,
     all: Annotated[bool, typer.Option("--all", help="Scan the whole library, not just the config.")] = False,
-    new: Annotated[
-        bool, typer.Option("--new", help="Only library artifacts missing from the config.")
-    ] = False,
+    new: Annotated[bool, typer.Option("--new", help="Only library artifacts missing from the config.")] = False,
 ) -> None:
     """Show what is installed, partial, missing or unavailable, by section."""
     active = _load(config)
@@ -119,18 +111,16 @@ def scan(
     if not (all or new) and cfg.name != str(cfgmod.bundled_dir() / "reference.yaml"):
         missing = [id for id in library_config(active).ids if active.entry(id) is None]
         if missing:
-            console.print(
-                f"[cyan]ℹ {len(missing)} library artifacts are not in your config — `scan --all --new`[/]"
-            )
+            console.print(f"[cyan]ℹ {len(missing)} library artifacts are not in your config — `scan --all --new`[/]")
 
 
 # ── install ──────────────────────────────────────────────────────────────────
 
 
-def show_plan(cfg: Config, plan: Plan, p: Platform) -> int:
-    """Print the diff screen. Returns the number of artifacts with work to do."""
+def plan_report(cfg: Config, plan: Plan, p: Platform) -> list[str]:
+    """The diff screen as markup lines: answers, already in place, to install, caveats."""
     state = State()
-    console.print("[bold]Answers:[/] " + ", ".join(f"{k}={v}" for k, v in plan.answers.items()))
+    lines = ["[bold]Answers:[/] " + ", ".join(f"{k}={v}" for k, v in plan.answers.items())]
     todo, done, irreversible, labels = [], [], [], {}
     for i in plan.order:
         effs = pending(cfg.library[i], p, state)
@@ -138,29 +128,33 @@ def show_plan(cfg: Config, plan: Plan, p: Platform) -> int:
         labels[i] = ", ".join(e.label for e in effs)
         irreversible += [f"{i}: {e.label}" for e in effs if not e.reversible]
     if done:
-        console.print(f"\n[green]Already in place ({len(done)}):[/] " + ", ".join(done))
+        lines += ["", f"[green]Already in place ({len(done)}):[/] " + ", ".join(done)]
     if todo:
-        console.print(f"\n[bold]To install ({len(todo)}):[/]")
+        lines += ["", f"[bold]To install ({len(todo)}):[/]"]
         for i in todo:
             why = "" if plan.reasons[i] == "selected" else f" ({plan.reasons[i]})"
-            console.print(f"  + {i}[dim]{why} — {labels[i]}[/]", no_wrap=True, overflow="ellipsis")
-    for i, why in plan.skipped.items():
-        console.print(f"  [dim]– {i}: {why}[/]")
+            lines.append(f"  + {i}[dim]{why} — {labels[i]}[/]")
+    lines += [f"  [dim]– {i}: {why}[/]" for i, why in plan.skipped.items()]
+    if plan.replace:
+        lines += ["", "[yellow]Replaced (uninstalled after install):[/] " + ", ".join(plan.replace)]
     if irreversible:
-        console.print("\n[yellow]Can't be undone by uninstall:[/]\n  " + "\n  ".join(irreversible))
+        lines += ["", "[yellow]Can't be undone by uninstall:[/]", *(f"  {x}" for x in irreversible)]
     pats = {i: cfg.library[i].conflicts for i in plan.order if cfg.library[i].conflicts}
     if found := conflicts(pats):
-        console.print("\n[yellow]Your ~/.zshrc may double-load these (rigsmith never edits your lines):[/]")
-        console.print("  " + "\n  ".join(found))
-    for w in plan.warnings:
-        console.print(f"[yellow]⚠ {w}[/]")
-    return len(todo)
+        lines += ["", "[yellow]Your ~/.zshrc may double-load these (rigsmith never edits your lines):[/]"]
+        lines += [f"  {x}" for x in found]
+    lines += [f"[yellow]⚠ {w}[/]" for w in plan.warnings]
+    return lines
+
+
+def show_plan(cfg: Config, plan: Plan, p: Platform) -> None:
+    for line in plan_report(cfg, plan, p):
+        console.print(line, no_wrap=line.startswith("  +"), overflow="ellipsis")
 
 
 def show_result(res: Result, verb: str) -> None:
     console.print(
-        f"\n[bold]{verb}:[/] {res.changes} changes · "
-        f"✓ {len(res.ok)} · ✗ {len(res.failed)} · ⊘ {len(res.skipped)}"
+        f"\n[bold]{verb}:[/] {res.changes} changes · ✓ {len(res.ok)} · ✗ {len(res.failed)} · ⊘ {len(res.skipped)}"
     )
     for i, err in res.failed.items():
         console.print(f"  [red]✗ {i}: {err}[/]")
@@ -199,8 +193,11 @@ def install(
     if not plan.order:
         console.print("Nothing selected.")
         return
-    res = Runner(p, say=console.print).install(cfg, plan.order, plan.env)
+    runner = Runner(p, say=console.print)
+    res = runner.install(cfg, plan.order, plan.env)
     show_result(res, "Installed")
+    if plan.replace and not res.failed:
+        show_result(runner.uninstall(cfg, plan.replace), "Replaced")
     if res.failed:
         raise typer.Exit(1)
 

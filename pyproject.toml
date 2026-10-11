@@ -37,11 +37,12 @@ packages = ["src/rigsmith"]
 "config" = "rigsmith/_config"
 
 [tool.ruff]
-line-length = 110
+line-length = 120
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B", "SIM"]
 ignore = ["SIM300"]
+per-file-ignores = { "tests/test_tui.py" = ["F811"] }  # pytest fixture re-exported from test_runner
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

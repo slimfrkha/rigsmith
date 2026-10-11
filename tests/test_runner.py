@@ -56,9 +56,7 @@ def cfg():
     RAN.clear()
     c = config.parse(config.yaml().load(MENU))
     arts = [
-        Artifact(
-            id="alpha", help="a", sources=[Fake("alpha")], shell=Snippet("zoxide.zsh", 50), register=False
-        ),
+        Artifact(id="alpha", help="a", sources=[Fake("alpha")], shell=Snippet("zoxide.zsh", 50), register=False),
         Artifact(id="beta", help="b", sources=[Fake("beta")], requires=["alpha"], register=False),
         Artifact(id="gamma", help="g", sources=[Fake("gamma")], register=False),
         Hooked(id="hooked", help="h", sources=[Fake("hooked")], register=False),

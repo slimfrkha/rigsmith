@@ -3,7 +3,9 @@
 from rigsmith.backends import BREW_PATHS, Apt, Script
 from rigsmith.model import Artifact, Snippet
 
-BREW_INSTALL = 'NONINTERACTIVE=1 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"'
+BREW_INSTALL = (
+    'NONINTERACTIVE=1 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"'
+)
 
 Artifact(
     id="apt-base",
