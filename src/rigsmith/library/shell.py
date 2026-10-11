@@ -1,10 +1,17 @@
 """zsh, its plugin manager, prompt, plugins, history and helpers."""
 
 from rigsmith.backends import Apt, Brew, GitClone
+from rigsmith.effects import Effect, LoginShellEffect
 from rigsmith.library._util import snippet, tool
-from rigsmith.model import Artifact, Snippet, run
+from rigsmith.model import Artifact, Platform, Snippet, run
 
-Artifact(
+
+class Zsh(Artifact):
+    def extra_effects(self, p: Platform) -> list[Effect]:
+        return [LoginShellEffect(self.id)] if p.os == "linux" else []
+
+
+Zsh(
     id="zsh",
     help="The Z shell. rigsmith's snippets are zsh. Sets history, options and the completion system.",
     sources=[Brew("zsh", os="darwin"), Apt("zsh", os="linux")],

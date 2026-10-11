@@ -147,7 +147,11 @@ class Backend:
     def install(self) -> None:
         raise NotImplementedError
 
-    def uninstall(self) -> None:
+    def snapshot(self) -> Any:
+        """Pre-install state needed for a precise uninstall (e.g. which of several packages existed)."""
+        return None
+
+    def uninstall(self, snapshot: Any = None) -> None:
         raise NotImplementedError
 
     def __str__(self) -> str:
@@ -256,6 +260,10 @@ class Artifact:
 
     def post_install(self) -> None:
         """Override for one-off irreversible setup (e.g. importing history)."""
+
+    def extra_effects(self, p: Platform) -> list[Any]:
+        """Override to add effects beyond package, snippets, files and settings (e.g. chsh)."""
+        return []
 
     @property
     def has_post_install(self) -> bool:

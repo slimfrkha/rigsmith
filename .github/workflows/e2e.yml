@@ -1,0 +1,35 @@
+name: e2e
+on:
+  push:
+    branches: [main]
+  pull_request:
+  schedule:
+    - cron: "0 3 * * *"
+  workflow_dispatch:
+
+env:
+  # PRs: the minimal core. Nightly: the whole standard profile.
+  E2E_ARGS: ${{ github.event_name == 'schedule' && '-p standard' || '-p minimal -s system -s shell -s cli -s git' }}
+
+jobs:
+  macos:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+      - run: tests/e2e/run.sh
+
+  ubuntu:
+    # A bare container: exercises the Homebrew bootstrap, apt, chsh, as a non-root user (brew refuses root).
+    runs-on: ubuntu-latest
+    container: ubuntu:24.04
+    steps:
+      - run: apt-get update -q && apt-get install -y -q sudo curl git ca-certificates
+      - uses: actions/checkout@v4
+      - run: |
+          useradd -m -s /bin/bash tester
+          echo 'tester ALL=(ALL) NOPASSWD:ALL' > /etc/sudoers.d/tester
+          chown -R tester "$GITHUB_WORKSPACE"
+      - run: |
+          su tester -c "curl -LsSf https://astral.sh/uv/install.sh | sh && \
+            export PATH=\$HOME/.local/bin:\$PATH && cd '$GITHUB_WORKSPACE' && E2E_ARGS='$E2E_ARGS' tests/e2e/run.sh"

@@ -10,10 +10,13 @@ from rigsmith import config as cfgmod
 from rigsmith import library  # noqa: F401  (registers built-in artifacts)
 from rigsmith.config import Config, ConfigError, Entry
 from rigsmith.model import Platform, ensure_path
-from rigsmith.plan import select
+from rigsmith.plan import Plan, build, dependents, select, toposort
+from rigsmith.runner import Result, Runner, effects_for, pending, status
+from rigsmith.shell import conflicts
+from rigsmith.state import NOOP, State
 
 app = typer.Typer(no_args_is_help=True, add_completion=False, help=__doc__)
-console = Console()
+console = Console(highlight=False)
 
 Ids = Annotated[
     list[str] | None, typer.Argument(help="Artifact ids (AND with the filters).", show_default=False)
@@ -23,6 +26,13 @@ ProfileOpt = Annotated[str | None, typer.Option("-p", "--profile", help="Profile
 SectionOpt = Annotated[
     list[str] | None,
     typer.Option("-s", "--section", help="SECTION or SECTION/SUB, repeatable.", show_default=False),
+]
+YesOpt = Annotated[
+    bool, typer.Option("-y", "--yes", help="Non-interactive: defaults, no picker, no confirm.")
+]
+DryOpt = Annotated[bool, typer.Option("--dry-run", help="Show the plan and exit.")]
+UnsupportedOpt = Annotated[
+    bool, typer.Option("--unsupported", help="Run on a platform rigsmith doesn't support.")
 ]
 
 
@@ -40,6 +50,16 @@ def _load(source: str | None) -> Config:
     return cfg
 
 
+def _platform(unsupported: bool) -> Platform:
+    p = Platform.detect()
+    if not p.supported and not unsupported:
+        raise ConfigError(
+            f"{p} is not a supported platform (macOS 14+, Ubuntu 22.04/24.04, Debian 12). "
+            "Pass --unsupported to try anyway."
+        )
+    return p
+
+
 def library_config(active: Config) -> Config:
     """The whole library: reference.yaml plus any user artifact it doesn't list."""
     ref = cfgmod.load("reference")
@@ -49,16 +69,10 @@ def library_config(active: Config) -> Config:
     return ref
 
 
-STATUS = {"installed": "[green]✓[/]", "missing": "[red]✗[/]", "n/a": "[dim]–[/]"}
+ICON = {"installed": "[green]✓[/]", "partial": "[yellow]◐[/]", "missing": "[red]✗[/]", "n/a": "[dim]–[/]"}
 
 
-def status(cfg: Config, id: str, p: Platform) -> str:
-    art = cfg.library[id]
-    if not art.available(p):
-        return "n/a"
-    if not art.sources:
-        return "missing"  # config-only artifacts: refined once receipts exist
-    return "installed" if art.present(p) else "missing"
+# ── scan ─────────────────────────────────────────────────────────────────────
 
 
 @app.command()
@@ -72,13 +86,13 @@ def scan(
         bool, typer.Option("--new", help="Only library artifacts missing from the config.")
     ] = False,
 ) -> None:
-    """Show what is installed, missing or unavailable, by section."""
+    """Show what is installed, partial, missing or unavailable, by section."""
     active = _load(config)
     cfg = library_config(active) if all or new else active
     entries = select(cfg, ids=ids or [], profile=profile, sections=section or [])
     if new:
         entries = [e for e in entries if active.entry(e.id) is None]
-    p = Platform.detect()
+    p, state = Platform.detect(), State()
 
     counts: dict[str, int] = {}
     last: tuple[str, str] | None = None
@@ -88,25 +102,166 @@ def scan(
             console.print(f"[bold magenta]{e.section}[/] [magenta]/ {e.subsection}[/]")
             last = (e.section, e.subsection)
         art = cfg.library[e.id]
-        st = status(cfg, e.id, p)
+        st = status(art, p)
         counts[st] = counts.get(st, 0) + 1
         src = art.source(p)
-        line = Text.from_markup(f"  {STATUS[st]} ") + Text(
-            f"{e.id:<{w}}  {e.profile:<13}  {src.name if src else 'config':<7}  "
+        owner = "managed" if state.managed(e.id) else "pre-existing" if st in ("installed", "partial") else ""
+        line = Text.from_markup(f"  {ICON[st]} ") + Text(
+            f"{e.id:<{w}}  {e.profile:<13}  {src.name if src else 'config':<7}  {owner:<12}  "
         )
         line.append(art.help, style="dim")
         console.print(line, no_wrap=True, overflow="ellipsis")
     console.print(
         f"\n[bold]{len(entries)}[/] artifacts · "
-        + " · ".join(f"{STATUS[k]} {k} {v}" for k, v in counts.items())
+        + " · ".join(f"{ICON[k]} {k} {v}" for k, v in counts.items())
         + f" · platform {p}{'' if p.supported else ' [yellow](unsupported)[/]'}"
     )
-    if not (all or new):
+    if not (all or new) and cfg.name != str(cfgmod.bundled_dir() / "reference.yaml"):
         missing = [id for id in library_config(active).ids if active.entry(id) is None]
-        if missing and cfg.name != str(cfgmod.bundled_dir() / "reference.yaml"):
+        if missing:
             console.print(
                 f"[cyan]ℹ {len(missing)} library artifacts are not in your config — `scan --all --new`[/]"
             )
+
+
+# ── install ──────────────────────────────────────────────────────────────────
+
+
+def show_plan(cfg: Config, plan: Plan, p: Platform) -> int:
+    """Print the diff screen. Returns the number of artifacts with work to do."""
+    state = State()
+    console.print("[bold]Answers:[/] " + ", ".join(f"{k}={v}" for k, v in plan.answers.items()))
+    todo, done, irreversible, labels = [], [], [], {}
+    for i in plan.order:
+        effs = pending(cfg.library[i], p, state)
+        (todo if effs else done).append(i)
+        labels[i] = ", ".join(e.label for e in effs)
+        irreversible += [f"{i}: {e.label}" for e in effs if not e.reversible]
+    if done:
+        console.print(f"\n[green]Already in place ({len(done)}):[/] " + ", ".join(done))
+    if todo:
+        console.print(f"\n[bold]To install ({len(todo)}):[/]")
+        for i in todo:
+            why = "" if plan.reasons[i] == "selected" else f" ({plan.reasons[i]})"
+            console.print(f"  + {i}[dim]{why} — {labels[i]}[/]", no_wrap=True, overflow="ellipsis")
+    for i, why in plan.skipped.items():
+        console.print(f"  [dim]– {i}: {why}[/]")
+    if irreversible:
+        console.print("\n[yellow]Can't be undone by uninstall:[/]\n  " + "\n  ".join(irreversible))
+    pats = {i: cfg.library[i].conflicts for i in plan.order if cfg.library[i].conflicts}
+    if found := conflicts(pats):
+        console.print("\n[yellow]Your ~/.zshrc may double-load these (rigsmith never edits your lines):[/]")
+        console.print("  " + "\n  ".join(found))
+    for w in plan.warnings:
+        console.print(f"[yellow]⚠ {w}[/]")
+    return len(todo)
+
+
+def show_result(res: Result, verb: str) -> None:
+    console.print(
+        f"\n[bold]{verb}:[/] {res.changes} changes · "
+        f"✓ {len(res.ok)} · ✗ {len(res.failed)} · ⊘ {len(res.skipped)}"
+    )
+    for i, err in res.failed.items():
+        console.print(f"  [red]✗ {i}: {err}[/]")
+    for w in res.warnings:
+        console.print(f"  [yellow]⚠ {w}[/]")
+    if res.notes:
+        console.print("\n[bold]Next steps:[/]\n  " + "\n  ".join(f"• {n}" for n in dict.fromkeys(res.notes)))
+    if verb == "Installed" and res.changes:
+        console.print("\nOpen a new terminal (or run `exec zsh`) to load the changes.")
+
+
+@app.command()
+def install(
+    ids: Ids = None,
+    config: ConfigOpt = None,
+    profile: ProfileOpt = None,
+    section: SectionOpt = None,
+    yes: YesOpt = False,
+    dry_run: DryOpt = False,
+    unsupported: UnsupportedOpt = False,
+) -> None:
+    """Questionnaire → picker → diff → confirm → install."""
+    cfg = _load(config)
+    p = _platform(unsupported)
+    if yes or dry_run:
+        plan = build(cfg, p, ids=ids or [], profile=profile, sections=section or [])
+    else:
+        from rigsmith.tui import interactive_install  # noqa: PLC0415  (Textual loads lazily)
+
+        plan = interactive_install(cfg, p, ids=ids or [], profile=profile, sections=section or [])
+        if plan is None:
+            raise typer.Exit(1)
+    show_plan(cfg, plan, p)
+    if dry_run:
+        return
+    if not plan.order:
+        console.print("Nothing selected.")
+        return
+    res = Runner(p, say=console.print).install(cfg, plan.order, plan.env)
+    show_result(res, "Installed")
+    if res.failed:
+        raise typer.Exit(1)
+
+
+# ── uninstall ────────────────────────────────────────────────────────────────
+
+
+@app.command()
+def uninstall(
+    ids: Ids = None,
+    config: ConfigOpt = None,
+    profile: ProfileOpt = None,
+    section: SectionOpt = None,
+    yes: YesOpt = False,
+    dry_run: DryOpt = False,
+    include_unmanaged: Annotated[
+        bool, typer.Option("--include-unmanaged", help="Also remove packages rigsmith didn't install.")
+    ] = False,
+) -> None:
+    """Undo what rigsmith installed, from its receipts."""
+    cfg = _load(config)
+    p, state = Platform.detect(), State()
+    scope = [e.id for e in select(cfg, ids=ids or [], profile=profile, sections=section or [])]
+    present = {i for i in scope if include_unmanaged and status(cfg.library[i], p) != "missing"}
+    candidates = [i for i in scope if state.managed(i) or i in present]
+    if not yes and not dry_run:
+        from rigsmith.tui import pick_uninstall  # noqa: PLC0415
+
+        picked = pick_uninstall(cfg, p, candidates)
+        if picked is None:
+            raise typer.Exit(1)
+        candidates = picked
+    order = list(reversed(toposort(cfg.library, candidates, p)))
+    if not order:
+        console.print("Nothing rigsmith installed matches.")
+        return
+    console.print(f"[bold]To uninstall ({len(order)}):[/] " + ", ".join(order))
+    installed_elsewhere = [i for i in cfg.ids if state.managed(i) and i not in order]
+    for i in order:
+        if needed := dependents(cfg.library, i, installed_elsewhere):
+            console.print(f"[yellow]⚠ {i} is needed by: {', '.join(needed)} (they stay installed)[/]")
+    if not include_unmanaged:
+        kept = [
+            i
+            for i in order
+            if any(
+                (r := state.get(e.key)) and r.op == NOOP
+                for e in effects_for(cfg.library[i], p)
+                if e.key.startswith("pkg:")
+            )
+        ]
+        if kept:
+            console.print("[dim]Pre-existing packages left alone: " + ", ".join(kept) + "[/]")
+    if dry_run:
+        return
+    if not yes and not typer.confirm("Proceed?", default=False):
+        raise typer.Exit(1)
+    res = Runner(p, say=console.print).uninstall(cfg, order, include_unmanaged)
+    show_result(res, "Uninstalled")
+    if res.failed:
+        raise typer.Exit(1)
 
 
 def main() -> None:

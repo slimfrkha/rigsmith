@@ -4,6 +4,7 @@ import os
 import shutil
 from dataclasses import dataclass, field
 from pathlib import Path
+from typing import Any
 
 from rigsmith.model import Backend, backend, cached, out, run
 
@@ -34,7 +35,7 @@ class Brew(Backend):
     def install(self) -> None:
         run([_need_brew(), "install", self.pkg], env={"HOMEBREW_NO_ENV_HINTS": "1"})
 
-    def uninstall(self) -> None:
+    def uninstall(self, snapshot: Any = None) -> None:
         run([_need_brew(), "uninstall", self.pkg])
 
 
@@ -46,7 +47,7 @@ class Cask(Brew):
     def install(self) -> None:
         run([_need_brew(), "install", "--cask", self.pkg], env={"HOMEBREW_NO_ENV_HINTS": "1"})
 
-    def uninstall(self) -> None:
+    def uninstall(self, snapshot: Any = None) -> None:
         run([_need_brew(), "uninstall", "--cask", self.pkg])
 
 
@@ -83,7 +84,7 @@ class Apt(Backend):
             _apt_updated = True
         run(["apt-get", "install", "-y", "-q", *self.pkg.split()], sudo=True, env=env)
 
-    def uninstall(self) -> None:
+    def uninstall(self, snapshot: Any = None) -> None:
         run(
             ["apt-get", "remove", "-y", "-q", *self.pkg.split()],
             sudo=True,
@@ -115,7 +116,7 @@ class Script(Backend):
     def install(self) -> None:
         run(self.install_cmd)
 
-    def uninstall(self) -> None:
+    def uninstall(self, snapshot: Any = None) -> None:
         if self.remove_cmd is None:
             raise RuntimeError(f"{self.pkg} has no uninstall command")
         run(self.remove_cmd)
@@ -139,5 +140,5 @@ class GitClone(Backend):
         self.path.parent.mkdir(parents=True, exist_ok=True)
         run(["git", "clone", "--depth=1", self.pkg, str(self.path)])
 
-    def uninstall(self) -> None:
+    def uninstall(self, snapshot: Any = None) -> None:
         shutil.rmtree(self.path)
