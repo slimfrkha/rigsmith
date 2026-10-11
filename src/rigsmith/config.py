@@ -1,5 +1,6 @@
 """Config (the menu): load, resolve, validate."""
 
+import copy
 import importlib.resources
 import importlib.util
 import sys
@@ -199,3 +200,36 @@ def dump(doc: Any) -> str:
     buf = StringIO()
     yaml().dump(doc, buf)
     return buf.getvalue()
+
+
+def fork(src: Config, entries: list[Entry], picked: list[str], profiles: dict[str, str]) -> Any:
+    """A copy of `src`'s YAML (comments kept) holding only `picked`, at the chosen profiles.
+
+    `entries` may include artifacts `src` doesn't list (new in the library); picked ones are added
+    under their reference section.
+    """
+    from ruamel.yaml.comments import CommentedMap  # noqa: PLC0415
+
+    doc = copy.deepcopy(src.doc) if src.doc is not None else CommentedMap()
+    sections = doc.setdefault("sections", CommentedMap())
+    keep = set(picked)
+    for e in entries:
+        subs = sections.setdefault(e.section, CommentedMap())
+        arts = subs.setdefault(e.subsection, CommentedMap())
+        if e.id in keep:
+            arts[e.id] = profiles.get(e.id, e.profile)
+        else:
+            arts.pop(e.id, None)
+    for sec in list(sections):
+        for sub in list(sections[sec] or {}):
+            if not sections[sec][sub]:
+                del sections[sec][sub]
+        if not sections[sec]:
+            del sections[sec]
+    cfg = parse(doc, name=src.name)
+    answers = doc.get("answers") or {}
+    for problem in validate_answers(cfg):  # drop answers that point at artifacts no longer in scope
+        answers.pop(problem.split(":")[0].removeprefix("answers."), None)
+    if "answers" in doc and not answers:
+        del doc["answers"]
+    return doc

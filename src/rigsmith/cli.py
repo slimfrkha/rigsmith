@@ -1,5 +1,9 @@
 """rigsmith command line: init / install / scan / uninstall."""
 
+import os
+import shlex
+import subprocess
+from pathlib import Path
 from typing import Annotated
 
 import typer
@@ -259,6 +263,54 @@ def uninstall(
     show_result(res, "Uninstalled")
     if res.failed:
         raise typer.Exit(1)
+
+
+# ── init ─────────────────────────────────────────────────────────────────────
+
+
+@app.command()
+def init(
+    from_: Annotated[str | None, typer.Option("--from", help="Config or preset to fork (default: reference).")] = None,
+    output: Annotated[str | None, typer.Option("-o", "--output", help="Where to write (default: user config).")] = None,
+) -> None:
+    """Create your own menu: pick artifacts and profiles, then optionally restructure in $EDITOR."""
+    from rigsmith.tui import pick_scope  # noqa: PLC0415
+
+    src = _load(from_ or "reference")
+    p = Platform.detect()
+    ref = library_config(src)
+    entries = [*src.entries, *(e for e in ref.entries if src.entry(e.id) is None)]  # new ones arrive unticked
+    picked = pick_scope(src, p, entries, set(src.ids))
+    if picked is None:
+        raise typer.Exit(1)
+    doc = cfgmod.fork(src, entries, picked["picked"], picked["profiles"])
+    dest = Path(output).expanduser() if output else cfgmod.user_config()
+    if dest.exists() and not typer.confirm(f"{dest} exists. Overwrite?", default=False):
+        raise typer.Exit(1)
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    dest.write_text(cfgmod.dump(doc))
+    console.print(f"[green]✓[/] wrote {dest} ({len(picked['picked'])} artifacts)")
+    if typer.confirm("Restructure sections in your editor?", default=False):
+        edit_until_valid(dest)
+    hint = "rigsmith install" if dest == cfgmod.user_config() else f"rigsmith install -c {dest}"
+    console.print(f"Next: [bold]{hint}[/]")
+
+
+def edit_until_valid(path: Path) -> None:
+    editor = os.environ.get("VISUAL") or os.environ.get("EDITOR") or "vi"
+    while True:
+        subprocess.run([*shlex.split(editor), str(path)], check=False)
+        try:
+            errors = cfgmod.validate(cfgmod.load(str(path)))
+        except ConfigError as e:
+            errors = [str(e)]
+        if not errors:
+            console.print(f"[green]✓[/] {path} is valid")
+            return
+        console.print("[red]✗ invalid config:[/]\n  " + "\n  ".join(errors))
+        if not typer.confirm("Edit again?", default=True):
+            console.print(f"[yellow]⚠ {path} is invalid; fix it before installing.[/]")
+            return
 
 
 def main() -> None:

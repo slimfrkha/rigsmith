@@ -1,6 +1,6 @@
 import pytest
 
-from rigsmith import config
+from rigsmith import config, library  # noqa: F401  (registers questions)
 from rigsmith.backends import Apt, Brew
 from rigsmith.config import ConfigError
 from rigsmith.model import Artifact, Platform
@@ -132,3 +132,31 @@ def test_apt_uninstall_keeps_packages_that_existed_before(monkeypatch):
     assert snap == ["curl", "git"]
     apt.uninstall(snap)
     assert calls == [["apt-get", "remove", "-y", "-q", "build-essential"]]
+
+
+def test_fork_keeps_comments_scopes_and_cleans_answers():
+    src = menu(
+        """
+# my team menu
+profiles: [minimal, standard, comprehensive]
+sections:
+  cli:
+    search: {ripgrep: minimal, fd: standard}  # search tools
+    files: {eza: minimal}
+  shell:
+    prompt: {p10k: minimal, starship: minimal}
+answers: {prompt: p10k, icons: "yes"}
+"""
+    )
+    extra = config.Entry("yazi", "cli", "files", "comprehensive")  # new in the library
+    doc = config.fork(src, [*src.entries, extra], ["ripgrep", "starship", "yazi"], {"ripgrep": "standard"})
+    out = config.dump(doc)
+    assert "# my team menu" in out and "# search tools" in out
+    cfg = config.parse(config.yaml().load(out))
+    assert [(e.id, e.profile) for e in cfg.entries] == [
+        ("ripgrep", "standard"),
+        ("yazi", "comprehensive"),
+        ("starship", "minimal"),
+    ]
+    assert cfg.answers == {"icons": "yes"}  # prompt: p10k no longer valid → dropped
+    assert config.validate(cfg) == []

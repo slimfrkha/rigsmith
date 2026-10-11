@@ -47,7 +47,7 @@ def cli(home):
     (d / "fake.py").write_text(PLUGIN)
     (home / ".config/rigsmith/config.yaml").write_text(CONFIG)
     runner = CliRunner()
-    yield lambda *args: runner.invoke(app, list(args), catch_exceptions=False)
+    yield lambda *args, input=None: runner.invoke(app, list(args), input=input, catch_exceptions=False)
     for id in ("t-base", "t-top"):
         ARTIFACTS.pop(id, None)
     sys.modules.pop("rigsmith_user_fake", None)
@@ -94,3 +94,40 @@ def test_bad_config_is_reported(cli, home):
     (home / ".config/rigsmith/config.yaml").write_text(textwrap.dedent(CONFIG) + "answers: {profile: huge}\n")
     with pytest.raises(Exception, match="answers.profile"):
         cli("scan")
+
+
+def test_init_forks_a_config(cli, home, monkeypatch):
+    import rigsmith.tui
+
+    seen = {}
+
+    def fake_pick(cfg, p, entries, ticked):
+        seen["entries"] = [e.id for e in entries]
+        return {"picked": ["t-base"], "profiles": {"t-base": "standard"}}
+
+    monkeypatch.setattr(rigsmith.tui, "pick_scope", fake_pick)
+    out = home / "mine.yaml"
+    r = cli("init", "--from", str(home / ".config/rigsmith/config.yaml"), "-o", str(out), input="n\n")
+    assert r.exit_code == 0, r.output
+    assert "eza" in seen["entries"]  # library artifacts not in the source are offered (unticked)
+    text = out.read_text()
+    assert "t-base: standard" in text and "t-top" not in text
+    assert cli("scan", "-c", str(out)).exit_code == 0
+
+
+def test_editor_loop_reports_invalid_configs(cli, home, monkeypatch):
+    from rigsmith.cli import edit_until_valid
+
+    path = home / "c.yaml"
+    path.write_text(CONFIG)
+    breaker = home / "break.sh"
+    breaker.write_text('#!/bin/sh\necho "answers: {profile: huge}" >> "$1"\n')
+    breaker.chmod(0o755)
+    monkeypatch.setenv("EDITOR", str(breaker))
+    monkeypatch.setattr("typer.confirm", lambda *a, **k: False)  # "Edit again?" → no
+    edit_until_valid(path)
+    assert "huge" in path.read_text()
+
+    monkeypatch.setenv("EDITOR", "true")  # an editor that changes nothing
+    path.write_text(CONFIG)
+    edit_until_valid(path)  # valid on first pass, returns without asking
