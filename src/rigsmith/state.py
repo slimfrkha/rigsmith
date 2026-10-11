@@ -26,6 +26,7 @@ class State:
         self.path = state_home() / "state.json"
         data = json.loads(self.path.read_text()) if self.path.exists() else {}
         self.receipts: dict[str, Receipt] = {r["key"]: Receipt(**r) for r in data.get("receipts", [])}
+        self.requested: set[str] = set(data.get("requested", []))  # selected by the user, not pulled in
 
     def get(self, key: str) -> Receipt | None:
         return self.receipts.get(key)
@@ -47,5 +48,14 @@ class State:
     def save(self) -> None:
         self.path.parent.mkdir(parents=True, exist_ok=True)
         tmp = self.path.with_suffix(".tmp")
-        tmp.write_text(json.dumps({"version": 1, "receipts": [asdict(r) for r in self.receipts.values()]}, indent=1))
+        tmp.write_text(
+            json.dumps(
+                {
+                    "version": 1,
+                    "requested": sorted(self.requested),
+                    "receipts": [asdict(r) for r in self.receipts.values()],
+                },
+                indent=1,
+            )
+        )
         os.replace(tmp, self.path)

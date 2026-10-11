@@ -28,8 +28,7 @@ Artifact(
         Script(
             "gke-gcloud-auth-plugin",
             install_cmd="gcloud components install gke-gcloud-auth-plugin --quiet",
-            check_cmd="gcloud components list --filter=id:gke-gcloud-auth-plugin --format='value(state.name)' "
-            "2>/dev/null | grep -q Installed",
+            check_cmd='test -x "$(dirname "$(readlink -f "$(command -v gcloud)")")/gke-gcloud-auth-plugin"',
             remove_cmd="gcloud components remove gke-gcloud-auth-plugin --quiet",
         )
     ],

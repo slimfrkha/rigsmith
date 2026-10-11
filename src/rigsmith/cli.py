@@ -14,7 +14,7 @@ from rigsmith import config as cfgmod
 from rigsmith import library  # noqa: F401  (registers built-in artifacts)
 from rigsmith.config import Config, ConfigError, Entry
 from rigsmith.model import Platform, ensure_path
-from rigsmith.plan import Plan, build, dependents, select, toposort
+from rigsmith.plan import Plan, build, dependents, select, toposort, with_orphans
 from rigsmith.runner import Result, Runner, effects_for, pending, status
 from rigsmith.shell import conflicts
 from rigsmith.state import NOOP, State
@@ -198,7 +198,7 @@ def install(
         console.print("Nothing selected.")
         return
     runner = Runner(p, say=console.print)
-    res = runner.install(cfg, plan.order, plan.env)
+    res = runner.install(cfg, plan)
     show_result(res, "Installed")
     if plan.replace and not res.failed:
         show_result(runner.uninstall(cfg, plan.replace), "Replaced")
@@ -234,6 +234,8 @@ def uninstall(
         if picked is None:
             raise typer.Exit(1)
         candidates = picked
+    managed = [i for i in cfg.library if state.managed(i)]
+    candidates = with_orphans(cfg.library, candidates, managed, state.requested, p)
     order = list(reversed(toposort(cfg.library, candidates, p)))
     if not order:
         console.print("Nothing rigsmith installed matches.")

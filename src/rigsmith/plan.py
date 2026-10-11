@@ -165,3 +165,19 @@ def toposort(lib: dict[str, Artifact], ids: list[str], p: Platform) -> list[str]
 
 def dependents(lib: dict[str, Artifact], target: str, among: list[str]) -> list[str]:
     return [i for i in among if target in lib[i].requires]
+
+
+def with_orphans(lib: dict[str, Artifact], targets: list[str], managed: list[str], requested: set[str], p: Platform):
+    """`targets` plus the managed dependencies only they need, never ones the user asked for themselves."""
+    out = list(targets)
+    grew = True
+    while grew:
+        grew = False
+        for i in list(out):
+            for dep in lib[i].requirements(p) if i in lib else []:
+                if dep in out or dep not in managed or dep in requested:
+                    continue
+                if not any(dep in lib[j].requirements(p) for j in managed if j not in out and j in lib):
+                    out.append(dep)
+                    grew = True
+    return out

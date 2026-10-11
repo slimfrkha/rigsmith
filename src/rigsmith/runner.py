@@ -22,6 +22,7 @@ from rigsmith.effects import (
     snippet_effects,
 )
 from rigsmith.model import Artifact, Platform, state_home
+from rigsmith.plan import Plan
 from rigsmith.settings import setting_effects
 from rigsmith.shell import CORE, ZshrcBlock, core_effects, has_snippets
 from rigsmith.state import CREATED, IRREVERSIBLE, MODIFIED, NOOP, Receipt, State
@@ -83,8 +84,9 @@ class Runner:
 
     # ── install ──────────────────────────────────────────────────────────────
 
-    def install(self, cfg: Config, order: list[str], env: dict[str, str]) -> Result:
-        res = Result()
+    def install(self, cfg: Config, plan: Plan) -> Result:
+        res, order = Result(), plan.order
+        self.state.requested |= {i for i, why in plan.reasons.items() if why == "selected"}
         todo = {i: pending(cfg.library[i], self.p, self.state) for i in order}
         with self._log("install"):
             if any(e.sudo for effs in todo.values() for e in effs):
@@ -112,7 +114,7 @@ class Runner:
                     res.notes += art.notes
                 self.say(f"[{n}/{len(order)}] ✓ {i}" + (f" ({changed} changes)" if changed else ""))
             if has_snippets():
-                res.changes += sum(self._apply(e, res) for e in core_effects(env))
+                res.changes += sum(self._apply(e, res) for e in core_effects(plan.env))
             self.state.save()
         return res
 
@@ -164,6 +166,7 @@ class Runner:
                     self.state.save()
                 res.ok.append(i)
                 res.changes += changed
+                self.state.requested.discard(i)
                 self.say(f"[{n}/{len(order)}] ✓ {i}" + (f" ({changed} changes)" if changed else ""))
             if not has_snippets():
                 res.changes += self._undo_artifact(CORE, {}, False, res)

@@ -75,7 +75,7 @@ def cfg():
 
 def install(cfg, **kw):
     plan = build(cfg, P, **kw)
-    return plan, Runner(P, say=lambda _: None).install(cfg, plan.order, plan.env)
+    return plan, Runner(P, say=lambda _: None).install(cfg, plan)
 
 
 def uninstall(cfg, ids, **kw):
@@ -184,3 +184,22 @@ def test_dependencies_come_from_the_library_and_profile_defaults(cfg):
     assert plan.order == ["alpha", "beta"] and plan.reasons["alpha"] == "dependency of beta"
     assert "gamma" not in build(cfg, P).order  # default profile = first (minimal)
     assert "gamma" in build(cfg, P, profile="standard").order
+
+
+def test_uninstall_takes_orphaned_dependencies_but_not_requested_ones(cfg):
+    from rigsmith.plan import with_orphans
+    from rigsmith.state import State
+
+    plan, _ = install(cfg, ids=["beta"])  # alpha comes along as a dependency
+    st = State()
+    assert st.requested == {"beta"}
+    managed = [i for i in cfg.library if st.managed(i)]
+    assert with_orphans(cfg.library, ["beta"], managed, st.requested, P) == ["beta", "alpha"]
+    uninstall(cfg, ["beta", "alpha"])
+    assert INSTALLED == set()
+
+    install(cfg, ids=["alpha"])  # now alpha is asked for explicitly…
+    install(cfg, ids=["beta"])
+    st = State()
+    managed = [i for i in cfg.library if st.managed(i)]
+    assert with_orphans(cfg.library, ["beta"], managed, st.requested, P) == ["beta"]  # …so it stays

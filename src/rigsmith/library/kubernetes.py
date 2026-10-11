@@ -45,5 +45,10 @@ tool("popeye", "Scan a live cluster for misconfigurations and stale resources.")
 tool("kube-score", "Static analysis of manifests for reliability and security best practices.")
 tool("kind", "Kubernetes in Docker: local clusters in seconds for testing. `kind create cluster`.")
 tool("argocd", "Argo CD CLI for GitOps deployments.")
-ext("k8s-ext", "ms-kubernetes-tools.vscode-kubernetes-tools", "Kubernetes explorer, manifests and Helm in VS Code.")
+ext(  # depends on the YAML extension
+    "k8s-ext",
+    "ms-kubernetes-tools.vscode-kubernetes-tools",
+    "Kubernetes explorer, manifests and Helm in VS Code.",
+    requires=["vscode", "yaml-ext"],
+)
 ext("helm-ext", "Tim-Koehler.helm-intellisense", "Autocomplete for Helm chart templates and values.")

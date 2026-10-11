@@ -1,23 +1,24 @@
 name: e2e
+# The real install → verify → reinstall (0 changes) → uninstall → verify cycle, on throwaway machines.
 on:
   push:
     branches: [main]
   pull_request:
   schedule:
-    - cron: "0 3 * * *"
+    - cron: "0 3 * * 0" # weekly: every preset on Ubuntu
   workflow_dispatch:
     inputs:
       args:
-        description: "rigsmith filters, e.g. `-p standard` or `-c example`"
-        default: "-p standard"
-
-env:
-  # PRs: the minimal core. Nightly: the whole standard profile. Manual runs: whatever you pass.
-  E2E_ARGS: ${{ inputs.args || (github.event_name == 'schedule' && '-p standard') || '-p minimal -s system -s shell -s cli -s git' }}
+        description: "rigsmith filters, e.g. `-p standard` or `-c platform`"
+        default: "-c platform"
 
 jobs:
   macos:
+    # macOS minutes are billed 10x on private repos: pushes, PRs and manual runs only.
+    if: github.event_name != 'schedule'
     runs-on: macos-latest
+    env:
+      E2E_ARGS: ${{ inputs.args || '-p minimal -s system -s shell -s cli -s git' }}
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v6
@@ -25,8 +26,19 @@ jobs:
 
   ubuntu:
     # A bare container: exercises the Homebrew bootstrap, apt, chsh, as a non-root user (brew refuses root).
+    # One job per preset keeps each container's disk use bounded.
     runs-on: ubuntu-latest
     container: ubuntu:24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        args: >-
+          ${{ fromJSON(github.event_name == 'schedule'
+          && '["-c python", "-c backend-go", "-c rust", "-c java", "-c web",
+               "-c data-engineer", "-c ml-engineer", "-c platform", "-c server"]'
+          || format('["{0}"]', inputs.args || '-p minimal -s system -s shell -s cli -s git')) }}
+    env:
+      E2E_ARGS: ${{ matrix.args }}
     steps:
       - run: apt-get update -q && apt-get install -y -q sudo curl git ca-certificates
       - uses: actions/checkout@v4

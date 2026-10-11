@@ -14,8 +14,13 @@ snippet(
     requires=["uv"],
 )
 
-ext("python-ext", "ms-python.python", "VS Code Python support: run, test explorer, environments.")
 ext("debugpy-ext", "ms-python.debugpy", "VS Code Python debugger.")
+ext(  # the Python extension pulls in debugpy: install it first so rigsmith owns it
+    "python-ext",
+    "ms-python.python",
+    "VS Code Python support: run, test explorer, environments.",
+    requires=["vscode", "debugpy-ext"],
+)
 ext(
     "ruff-ext",
     "charliermarsh.ruff",
