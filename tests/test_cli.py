@@ -123,6 +123,7 @@ def test_editor_loop_reports_invalid_configs(cli, home, monkeypatch):
     breaker = home / "break.sh"
     breaker.write_text('#!/bin/sh\necho "answers: {profile: huge}" >> "$1"\n')
     breaker.chmod(0o755)
+    monkeypatch.delenv("VISUAL", raising=False)
     monkeypatch.setenv("EDITOR", str(breaker))
     monkeypatch.setattr("typer.confirm", lambda *a, **k: False)  # "Edit again?" → no
     edit_until_valid(path)
