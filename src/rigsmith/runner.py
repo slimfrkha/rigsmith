@@ -81,6 +81,7 @@ class Result:
 class Runner:
     def __init__(self, p: Platform, say: Callable[[str], None] = print) -> None:
         self.p, self.say, self.state = p, say, State()
+        self._absent_at_start: set[str] = set()
 
     # ── install ──────────────────────────────────────────────────────────────
 
@@ -88,6 +89,8 @@ class Runner:
         res, order = Result(), plan.order
         self.state.requested |= {i for i, why in plan.reasons.items() if why == "selected"}
         todo = {i: pending(cfg.library[i], self.p, self.state) for i in order}
+        # packages missing when the run starts: if one appears before its turn, this run brought it in
+        self._absent_at_start = {e.key for effs in todo.values() for e in effs if isinstance(e, PackageEffect)}
         with self._log("install"):
             if any(e.sudo for effs in todo.values() for e in effs):
                 sudo_upfront(self.say)
@@ -129,8 +132,9 @@ class Runner:
             return 1
         cur, want = e.current(), e.desired()
         if cur == want:
-            if not r:
-                self.state.put(Receipt(e.key, e.artifact, NOOP, want))
+            if not r:  # pulled in earlier in this run (e.g. an extension's dependency) → rigsmith owns it
+                op = CREATED if e.key in self._absent_at_start else NOOP
+                self.state.put(Receipt(e.key, e.artifact, op, want))
             return 0
         if r and r.op != NOOP:
             if cur != r.after:
@@ -188,7 +192,11 @@ class Runner:
             else:
                 cur = e.current()
                 if cur == r.after:
-                    e.restore(r.backup)
+                    try:
+                        e.restore(r.backup)
+                    except Exception:
+                        if e.current() is not None:  # still there: a real failure
+                            raise
                     changed += 1
                 elif cur is not None:
                     res.warnings.append(f"{e.label}: changed since install, kept")

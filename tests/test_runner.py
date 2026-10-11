@@ -203,3 +203,19 @@ def test_uninstall_takes_orphaned_dependencies_but_not_requested_ones(cfg):
     st = State()
     managed = [i for i in cfg.library if st.managed(i)]
     assert with_orphans(cfg.library, ["beta"], managed, st.requested, P) == ["beta"]  # …so it stays
+
+
+def test_package_pulled_in_by_an_earlier_step_is_owned_not_preexisting(cfg):
+    class PullsBeta(Fake):
+        def install(self):
+            super().install()
+            INSTALLED.add("beta")  # side effect, like an extension pack installing its members
+
+    cfg.library["alpha"].sources = [PullsBeta("alpha")]
+    cfg.library["beta"].requires = []
+    install(cfg, ids=["alpha", "beta"])
+    from rigsmith.state import State
+
+    assert State().get("pkg:beta").op == "created"
+    uninstall(cfg, ["alpha", "beta"])
+    assert INSTALLED == set()
