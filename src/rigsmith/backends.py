@@ -2,7 +2,10 @@
 
 import io
 import os
+import platform
 import shutil
+import sys
+import tarfile
 import urllib.request
 import zipfile
 from dataclasses import dataclass, field
@@ -259,3 +262,44 @@ class NerdFont(Backend):
     def uninstall(self, snapshot: Any = None) -> None:
         shutil.rmtree(self.path, ignore_errors=True)
         run("fc-cache -f >/dev/null 2>&1 || true")
+
+
+@backend("release")
+@dataclass
+class Release(Backend):
+    """One binary from a release archive (.zip, .tar.gz or raw) into ~/.local/bin.
+
+    `url` may use {os} (darwin/linux) and {arch} (amd64/arm64).
+    """
+
+    url: str = field(default="", kw_only=True)
+
+    @property
+    def dest(self) -> Path:
+        return Path.home() / ".local/bin" / self.pkg
+
+    def is_installed(self) -> bool:
+        return os.access(self.dest, os.X_OK)
+
+    def install(self) -> None:
+        machine = platform.machine().lower()
+        arch = {"x86_64": "amd64", "amd64": "amd64", "aarch64": "arm64", "arm64": "arm64"}[machine]
+        url = self.url.format(os="darwin" if sys.platform == "darwin" else "linux", arch=arch)
+        with urllib.request.urlopen(url, timeout=120) as resp:
+            data = resp.read()
+        if url.endswith(".zip"):
+            with zipfile.ZipFile(io.BytesIO(data)) as z:
+                data = z.read(next(n for n in z.namelist() if Path(n).name == self.pkg))
+        elif url.endswith((".tar.gz", ".tgz")):
+            with tarfile.open(fileobj=io.BytesIO(data)) as t:
+                member = next(m for m in t.getmembers() if Path(m.name).name == self.pkg and m.isfile())
+                fh = t.extractfile(member)
+                if fh is None:
+                    raise RuntimeError(f"{self.pkg} not found in {url}")
+                data = fh.read()
+        self.dest.parent.mkdir(parents=True, exist_ok=True)
+        self.dest.write_bytes(data)
+        self.dest.chmod(0o755)
+
+    def uninstall(self, snapshot: Any = None) -> None:
+        self.dest.unlink(missing_ok=True)

@@ -11,7 +11,8 @@ curl -fsSL https://raw.githubusercontent.com/slimfrkha/rigsmith/main/install.sh 
 ```
 
 A short questionnaire, a picker where you can tick or untick anything, a summary of exactly what will
-change, then one install after the other.
+change, then one install after the other. **[Browse the catalog →](docs/CATALOG.md)** 220+ tools across
+shell, CLI, git, Python, Go, Rust, Java, JS, containers, Kubernetes, cloud, IaC, data, ML and VS Code.
 
 ![picker](docs/screenshots/picker.svg)
 

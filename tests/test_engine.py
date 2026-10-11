@@ -162,3 +162,35 @@ answers: {prompt: p10k, icons: "yes"}
     ]
     assert cfg.answers == {"icons": "yes"}  # prompt: p10k no longer valid → dropped
     assert config.validate(cfg) == []
+
+
+@pytest.mark.parametrize("kind", ["zip", "tar.gz", "raw"])
+def test_release_backend_installs_one_binary(tmp_path, home, kind):
+    import io
+    import platform as pf
+    import sys
+    import tarfile
+    import zipfile
+
+    from rigsmith.backends import Release
+
+    arch = {"x86_64": "amd64", "amd64": "amd64", "aarch64": "arm64", "arm64": "arm64"}[pf.machine().lower()]
+    os_ = "darwin" if sys.platform == "darwin" else "linux"
+    payload = b"#!/bin/sh\necho hi\n"
+    archive = tmp_path / f"tool_{os_}_{arch}.{kind}"
+    if kind == "zip":
+        with zipfile.ZipFile(archive, "w") as z:
+            z.writestr("dist/tool", payload)
+    elif kind == "tar.gz":
+        with tarfile.open(archive, "w:gz") as t:
+            info = tarfile.TarInfo("dist/tool")
+            info.size = len(payload)
+            t.addfile(info, io.BytesIO(payload))
+    else:
+        archive.write_bytes(payload)
+    rel = Release("tool", url=f"file://{tmp_path}/tool_{{os}}_{{arch}}.{kind}")
+    assert not rel.is_installed()
+    rel.install()
+    assert rel.is_installed() and (home / ".local/bin/tool").read_bytes() == payload
+    rel.uninstall()
+    assert not rel.is_installed()

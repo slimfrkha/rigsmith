@@ -22,6 +22,7 @@ snippet("helm-aliases", "hl, hla, hui (upgrade --install), hd, hru, ht.", 70, re
 tool(
     "k9s", "THE terminal UI for Kubernetes: browse, logs, exec, port-forward, edit. `:pods`, `/` filter.", tags=["tui"]
 )
+tool("kustomize", "Template-free customization of Kubernetes YAML (`kubectl -k` without the version lag).")
 tool("stern", "Tail logs from many pods at once, color-coded: `stern api -n prod`.")
 Artifact(
     id="krew",

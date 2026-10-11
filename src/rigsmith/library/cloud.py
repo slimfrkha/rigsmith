@@ -1,7 +1,7 @@
 """Cloud provider CLIs."""
 
 from rigsmith.backends import Cask, Script
-from rigsmith.library._util import ext, snippet
+from rigsmith.library._util import ext, snippet, tool
 from rigsmith.model import Artifact, Snippet
 
 GCLOUD_LINUX = Script(
@@ -42,3 +42,5 @@ snippet(
     requires=["gcloud"],
 )
 ext("cloudcode-ext", "GoogleCloudTools.cloudcode", "Google Cloud Code: GKE, Cloud Run and APIs in VS Code.")
+tool("awscli", "AWS CLI v2. Then `aws configure sso` or `aws configure`.", bin="aws")
+ext("aws-ext", "AmazonWebServices.aws-toolkit-vscode", "AWS Toolkit: explore resources, Lambda, CodeWhisperer.")

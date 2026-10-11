@@ -3,8 +3,14 @@
 from rigsmith.library._util import ext, tool
 
 tool("node", "Node.js and npm.")
+tool("pnpm", "Fast, disk-efficient Node package manager.")
+tool("bun", "All-in-one JS runtime, bundler, test runner and package manager.")
+tool("deno", "Secure TypeScript/JavaScript runtime with batteries included.")
+tool("biome", "Fast formatter and linter for JS/TS/JSON/CSS (Prettier + ESLint in one).")
 ext("eslint-ext", "dbaeumer.vscode-eslint", "ESLint in VS Code.")
 ext("prettier-ext", "esbenp.prettier-vscode", "Prettier formatter for JS/TS/CSS/HTML/Markdown.")
+ext("biome-ext", "biomejs.biome", "Biome formatter and linter in VS Code.")
+ext("deno-ext", "denoland.vscode-deno", "Deno language support in VS Code.")
 ext("tailwind-ext", "bradlc.vscode-tailwindcss", "Tailwind CSS class completion and previews.")
 ext("vue-ext", "Vue.volar", "Vue 3 language support (Volar).")
 ext("svelte-ext", "svelte.svelte-vscode", "Svelte language support.")

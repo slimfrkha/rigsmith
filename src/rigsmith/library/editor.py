@@ -17,7 +17,7 @@ VSCODE_LINUX = Script(
 
 Artifact(
     id="vscode",
-    help="Visual Studio Code, with the `code` command on PATH.",
+    help="Visual Studio Code, with the `code` command on PATH. GitHub Copilot chat is built in.",
     sources=[Cask("visual-studio-code", os="darwin"), VSCODE_LINUX],
     check="command -v code || test -x '/Applications/Visual Studio Code.app/Contents/Resources/app/bin/code'",
 )
@@ -119,7 +119,6 @@ ext("coverage-gutters", "ryanluker.vscode-coverage-gutters", "Show test coverage
 ext("remote-ssh", "ms-vscode-remote.remote-ssh", "Open folders on remote machines over SSH.")
 ext("dev-containers", "ms-vscode-remote.remote-containers", "Develop inside containers (devcontainer.json).")
 ext("liveshare", "MS-vsliveshare.vsliveshare", "Real-time collaborative editing and debugging.")
-ext("copilot", "GitHub.copilot-chat", "GitHub Copilot: completions and chat (needs a Copilot plan).")
 ext("continue", "Continue.continue", "Open-source AI assistant: bring your own model.")
 ext(
     "yaml-ext",

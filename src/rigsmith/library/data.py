@@ -1,6 +1,15 @@
-"""Working with data files and databases in VS Code."""
+"""Working with data: terminal tools for files and databases, and the VS Code side."""
 
-from rigsmith.library._util import ext
+from rigsmith.backends import UvTool
+from rigsmith.library._util import ext, tool
+
+tool("duckdb", 'In-process analytical SQL: query CSV/Parquet/JSON files directly. `duckdb -c "select …"`.')
+tool("pgcli", "Postgres CLI with autocompletion and syntax highlighting.")
+tool("miller", "awk/sed/jq for CSV, TSV and JSON records: `mlr --icsv --opprint cat`.", bin="mlr")
+tool("visidata", "Terminal spreadsheet for exploring any tabular data: `vd file.csv`.", bin="vd", tags=["tui"])
+tool("lazysql", "Terminal UI for SQL databases (Postgres, MySQL, SQLite).", tags=["tui"])
+tool("harlequin", "SQL IDE in the terminal (DuckDB, SQLite, Postgres…).", sources=[UvTool("harlequin")], tags=["tui"])
+tool("kcat", "Kafka swiss-army knife: produce, consume, inspect topics.")
 
 ext("rainbow-csv", "mechatroner.rainbow-csv", "Color CSV columns and query them with SQL-like RBQL.")
 ext("sqltools", "mtxr.sqltools", "SQL client in VS Code (add a driver: sqltools-pg, sqltools-mysql).")

@@ -95,6 +95,15 @@ sections:
     diff:
       delta: standard
 
+  dev:
+    tools:
+      just: standard
+      direnv: standard
+      mise: standard
+      pre-commit: standard
+      watchexec: comprehensive
+      glow: comprehensive
+
   python:
     tooling:
       uv: minimal
@@ -110,6 +119,33 @@ sections:
       jupyter-ext: comprehensive
       autodocstring-ext: comprehensive
       python-indent-ext: comprehensive
+
+  go:
+    toolchain:
+      go: minimal
+      gopls: minimal
+      delve: standard
+      golangci-lint: standard
+      goreleaser: comprehensive
+    vscode:
+      go-ext: minimal
+
+  rust:
+    toolchain:
+      rustup: minimal
+      bacon: standard
+      cargo-nextest: standard
+      sccache: comprehensive
+    vscode:
+      rust-analyzer-ext: minimal
+
+  java:
+    toolchain:
+      openjdk: minimal
+      maven: standard
+      gradle: standard
+    vscode:
+      java-ext: minimal
 
   containers:
     runtime:
@@ -148,6 +184,8 @@ sections:
       kubeconform: comprehensive
       popeye: comprehensive
       kube-score: comprehensive
+    manifests:
+      kustomize: standard
     local:
       kind: standard
     gitops:
@@ -159,6 +197,9 @@ sections:
       gke-auth-plugin: minimal
       gcp-aliases: standard
       cloudcode-ext: comprehensive
+    aws:
+      awscli: standard
+      aws-ext: comprehensive
 
   iac:
     terraform:
@@ -169,6 +210,17 @@ sections:
       terragrunt: comprehensive
       trivy: comprehensive
       infracost: comprehensive
+      opentofu: comprehensive
+    hashicorp:
+      packer: comprehensive
+      vault: comprehensive
+    other:
+      pulumi: comprehensive
+      ansible: comprehensive
+      ansible-ext: comprehensive
+    secrets:
+      sops: standard
+      age: standard
 
   editor:
     vscode:
@@ -197,12 +249,17 @@ sections:
       dev-containers: standard
       liveshare: comprehensive
     ai:
-      copilot: standard
       continue: comprehensive
 
   web:
     tooling:
       node: standard
+      pnpm: standard
+      bun: comprehensive
+      deno: comprehensive
+      biome: standard
+      biome-ext: standard
+      deno-ext: comprehensive
       eslint-ext: standard
       prettier-ext: standard
       tailwind-ext: comprehensive
@@ -214,7 +271,24 @@ sections:
     api:
       rest-client: comprehensive
 
+  backend:
+    apis:
+      grpcurl: standard
+      websocat: comprehensive
+      mkcert: standard
+    load:
+      k6: comprehensive
+      oha: standard
+
   data:
+    terminal:
+      duckdb: minimal
+      pgcli: standard
+      miller: standard
+      visidata: standard
+      lazysql: comprehensive
+      harlequin: comprehensive
+      kcat: comprehensive
     files:
       rainbow-csv: standard
     databases:
@@ -225,6 +299,15 @@ sections:
       redis-ext: comprehensive
       sqlite-viewer: comprehensive
       database-client: comprehensive
+
+  ml:
+    notebooks:
+      jupyterlab: standard
+      marimo: comprehensive
+    models:
+      huggingface-cli: standard
+      ollama: standard
+      llm: comprehensive
 
   docs:
     markdown:
