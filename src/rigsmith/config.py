@@ -2,6 +2,7 @@
 
 import importlib.resources
 import importlib.util
+import sys
 from dataclasses import dataclass, field
 from io import StringIO
 from pathlib import Path
@@ -186,9 +187,14 @@ def validate_answers(cfg: Config) -> list[str]:
 def load_user_artifacts() -> None:
     """Import ~/.config/rigsmith/artifacts/*.py so they register into the library."""
     for path in sorted((config_home() / "artifacts").glob("*.py")):
-        spec = importlib.util.spec_from_file_location(f"rigsmith_user_{path.stem}", path)
+        name = f"rigsmith_user_{path.stem}"
+        if name in sys.modules:
+            continue
+        spec = importlib.util.spec_from_file_location(name, path)
         if spec and spec.loader:
-            spec.loader.exec_module(importlib.util.module_from_spec(spec))
+            module = importlib.util.module_from_spec(spec)
+            sys.modules[name] = module
+            spec.loader.exec_module(module)
 
 
 def dump(doc: Any) -> str:

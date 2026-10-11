@@ -72,5 +72,8 @@ sections:
       git: minimal
       gh: standard
       git-aliases: minimal
+      git-defaults: minimal
     ui:
       lazygit: standard
+    diff:
+      delta: standard
