@@ -7,6 +7,7 @@ sections:
     bootstrap:
       homebrew: minimal
       apt-base: minimal
+
   shell:
     core:
       zsh: minimal
@@ -26,6 +27,18 @@ sections:
       shell-aliases: minimal
       shell-functions: standard
       shell-extras: comprehensive
+
+  terminal:
+    emulator:
+      iterm2: standard
+      ghostty: comprehensive
+    fonts:
+      meslo-nf: minimal
+      jetbrains-nf: comprehensive
+      fira-nf: comprehensive
+    theme:
+      catppuccin-iterm: standard
+
   cli:
     files:
       eza: minimal
@@ -67,6 +80,7 @@ sections:
       tokei: comprehensive
       hyperfine: comprehensive
       thefuck: comprehensive
+
   git:
     core:
       git: minimal
@@ -75,5 +89,162 @@ sections:
       git-defaults: minimal
     ui:
       lazygit: standard
+      gitlens-ext: standard
+      git-graph-ext: comprehensive
+      github-pr-ext: comprehensive
     diff:
       delta: standard
+
+  python:
+    tooling:
+      uv: minimal
+      python: minimal
+      ruff: standard
+      ty: standard
+      python-aliases: standard
+    vscode:
+      python-ext: minimal
+      debugpy-ext: standard
+      ruff-ext: standard
+      ty-ext: standard
+      jupyter-ext: comprehensive
+      autodocstring-ext: comprehensive
+      python-indent-ext: comprehensive
+
+  containers:
+    runtime:
+      colima: standard
+      orbstack: standard
+      docker-desktop: standard
+      docker-engine: standard
+    tools:
+      docker-cli: standard
+      docker-aliases: standard
+      dive: comprehensive
+      lazydocker: comprehensive
+      docker-ext: standard
+
+  kubernetes:
+    core:
+      kubectl: minimal
+      kubectx: minimal
+      k8s-aliases: minimal
+      helm: standard
+      helm-aliases: standard
+      k8s-ext: standard
+      helm-ext: comprehensive
+    ui:
+      k9s: standard
+    logs:
+      stern: standard
+    plugins:
+      krew: comprehensive
+      krew-neat: comprehensive
+      krew-tree: comprehensive
+      krew-images: comprehensive
+      krew-get-all: comprehensive
+      krew-whoami: comprehensive
+    validate:
+      kubeconform: comprehensive
+      popeye: comprehensive
+      kube-score: comprehensive
+    local:
+      kind: standard
+    gitops:
+      argocd: comprehensive
+
+  cloud:
+    gcp:
+      gcloud: minimal
+      gke-auth-plugin: minimal
+      gcp-aliases: standard
+      cloudcode-ext: comprehensive
+
+  iac:
+    terraform:
+      terraform: minimal
+      tflint: standard
+      terraform-aliases: standard
+      terraform-ext: standard
+      terragrunt: comprehensive
+      trivy: comprehensive
+      infracost: comprehensive
+
+  editor:
+    vscode:
+      vscode: minimal
+      vscode-settings: standard
+      vscode-nerd-fonts: standard
+      catppuccin-vscode: standard
+      catppuccin-icons: standard
+      errorlens: standard
+      todo-tree: comprehensive
+      better-comments: comprehensive
+      path-intellisense: comprehensive
+      project-manager: comprehensive
+      bookmarks: comprehensive
+      indent-rainbow: comprehensive
+      advanced-new-file: comprehensive
+      fileutils: comprehensive
+      peacock: comprehensive
+      coverage-gutters: comprehensive
+    config-files:
+      yaml-ext: standard
+      toml-ext: standard
+      dotenv-ext: comprehensive
+    remote:
+      remote-ssh: standard
+      dev-containers: standard
+      liveshare: comprehensive
+    ai:
+      copilot: standard
+      continue: comprehensive
+
+  web:
+    tooling:
+      node: standard
+      eslint-ext: standard
+      prettier-ext: standard
+      tailwind-ext: comprehensive
+      vue-ext: comprehensive
+      svelte-ext: comprehensive
+      auto-rename-tag: comprehensive
+      color-highlight: comprehensive
+      react-snippets: comprehensive
+    api:
+      rest-client: comprehensive
+
+  data:
+    files:
+      rainbow-csv: standard
+    databases:
+      sqltools: comprehensive
+      sqltools-pg: comprehensive
+      sqltools-mysql: comprehensive
+      mongodb-ext: comprehensive
+      redis-ext: comprehensive
+      sqlite-viewer: comprehensive
+      database-client: comprehensive
+
+  docs:
+    markdown:
+      markdown-all-in-one: standard
+      markdownlint: comprehensive
+      markdown-mermaid: standard
+      markdown-preview-enhanced: comprehensive
+    diagrams:
+      drawio: comprehensive
+
+  fun:
+    terminal:
+      fastfetch: comprehensive
+      cmatrix: comprehensive
+      lolcat: comprehensive
+      figlet: comprehensive
+      cowsay: comprehensive
+      pipes-sh: comprehensive
+      sl: comprehensive
+      fun-aliases: comprehensive
+    vscode:
+      power-mode-ext: comprehensive
+      pets-ext: comprehensive

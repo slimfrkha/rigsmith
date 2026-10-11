@@ -243,7 +243,9 @@ class Artifact:
         return next((s for s in self.sources if s.matches(p)), None)
 
     def available(self, p: Platform) -> bool:
-        return not self.sources or self.source(p) is not None
+        if self.sources:
+            return self.source(p) is not None
+        return bool(self.snippets or self.settings or any(f.os in (None, p.os) for f in self.files))
 
     def present(self, p: Platform) -> bool:
         """Is the package on the system, regardless of which manager installed it?"""
@@ -326,6 +328,7 @@ EXTRA_PATH = (
     "~/.local/bin",
     "~/.cargo/bin",
     "~/.krew/bin",
+    "~/.local/share/google-cloud-sdk/bin",
 )
 
 

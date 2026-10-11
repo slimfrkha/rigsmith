@@ -1,7 +1,7 @@
 """git, GitHub CLI, git UIs and diff tooling."""
 
-from rigsmith.library._util import snippet, tool
-from rigsmith.model import Artifact, GitConfig, Snippet
+from rigsmith.library._util import ext, snippet, tool
+from rigsmith.model import Artifact, GitConfig, Snippet, VSCodeSetting
 
 tool("git", "Distributed version control.")
 tool("gh", "GitHub CLI: PRs, issues, releases and API from the terminal. `gh pr create`, `gh pr checkout`.")
@@ -43,3 +43,11 @@ tool(
     ],
     requires=["git"],
 )
+ext(
+    "gitlens-ext",
+    "eamodio.gitlens",
+    "GitLens: blame, history and comparisons in VS Code (code lens off, current-line blame on).",
+    settings=[VSCodeSetting("gitlens.codeLens.enabled", False), VSCodeSetting("gitlens.currentLine.enabled", True)],
+)
+ext("git-graph-ext", "mhutchie.git-graph", "Interactive git graph of your repository.")
+ext("github-pr-ext", "GitHub.vscode-pull-request-github", "Review and manage GitHub pull requests in VS Code.")

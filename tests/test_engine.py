@@ -3,7 +3,7 @@ import pytest
 from rigsmith import config, library  # noqa: F401  (registers questions)
 from rigsmith.backends import Apt, Brew
 from rigsmith.config import ConfigError
-from rigsmith.model import Artifact, Platform
+from rigsmith.model import Artifact, File, Platform, Snippet
 from rigsmith.plan import select
 
 MAC = Platform("darwin", "macos", "14.4", "arm64")
@@ -31,7 +31,9 @@ def test_source_selection_is_deterministic_by_platform():
     assert art.source(MAC).pkg == "t"
     mac_only = Artifact(id="m", help="m", sources=[Brew("m", os="darwin")], register=False)
     assert mac_only.source(NOBLE) is None and not mac_only.available(NOBLE)
-    assert Artifact(id="c", help="c", register=False).available(NOBLE)  # config-only
+    assert Artifact(id="c", help="c", shell=Snippet("zoxide.zsh", 50), register=False).available(NOBLE)
+    mac_file = Artifact(id="f", help="f", files=[File("x", "~/x", os="darwin")], register=False)
+    assert mac_file.available(MAC) and not mac_file.available(NOBLE)  # nothing to do on linux
 
 
 MENU = """

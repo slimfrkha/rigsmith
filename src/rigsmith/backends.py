@@ -1,7 +1,10 @@
 """Package-manager backends. Each answers is_installed / install / uninstall for one package."""
 
+import io
 import os
 import shutil
+import urllib.request
+import zipfile
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
@@ -144,3 +147,115 @@ class GitClone(Backend):
 
     def uninstall(self, snapshot: Any = None) -> None:
         shutil.rmtree(self.path)
+
+
+@cached
+def _krew_list() -> frozenset[str]:
+    return frozenset(out(["kubectl", "krew", "list"]).split())
+
+
+@backend("krew")
+class Krew(Backend):
+    """kubectl plugin from the krew index."""
+
+    bootstrap = "krew"
+
+    def is_installed(self) -> bool:
+        return self.pkg in _krew_list()
+
+    def install(self) -> None:
+        run(["kubectl", "krew", "install", self.pkg])
+
+    def uninstall(self, snapshot: Any = None) -> None:
+        run(["kubectl", "krew", "uninstall", self.pkg])
+
+
+CODE_PATHS = (
+    "/Applications/Visual Studio Code.app/Contents/Resources/app/bin/code",
+    "/usr/bin/code",
+    "/usr/share/code/bin/code",
+)
+
+
+def code_bin() -> str | None:
+    return shutil.which("code") or next((c for c in CODE_PATHS if os.access(c, os.X_OK)), None)
+
+
+@cached
+def _code_extensions() -> frozenset[str]:
+    code = code_bin()
+    return frozenset(out([code, "--list-extensions"]).lower().split()) if code else frozenset()
+
+
+@backend("vscode")
+class VSCodeExt(Backend):
+    """VS Code extension by marketplace id (publisher.name)."""
+
+    bootstrap = "vscode"
+
+    def _code(self) -> str:
+        if not (code := code_bin()):
+            raise RuntimeError("VS Code's `code` command is not installed")
+        return code
+
+    def is_installed(self) -> bool:
+        return self.pkg.lower() in _code_extensions()
+
+    def install(self) -> None:
+        run([self._code(), "--install-extension", self.pkg, "--force"])
+
+    def uninstall(self, snapshot: Any = None) -> None:
+        run([self._code(), "--uninstall-extension", self.pkg])
+
+
+@cached
+def _uv_tools() -> frozenset[str]:
+    lines = out(["uv", "tool", "list"]).splitlines()
+    return frozenset(line.split()[0] for line in lines if line and not line.startswith(("-", " ")))
+
+
+@backend("uvtool")
+class UvTool(Backend):
+    """Python CLI installed in its own environment with `uv tool install`. `pkg` may carry extras."""
+
+    bootstrap = "uv"
+
+    @property
+    def name_only(self) -> str:
+        return self.pkg.split("[")[0]
+
+    def is_installed(self) -> bool:
+        return self.name_only in _uv_tools()
+
+    def install(self) -> None:
+        run(["uv", "tool", "install", self.pkg])
+
+    def uninstall(self, snapshot: Any = None) -> None:
+        run(["uv", "tool", "uninstall", self.name_only])
+
+
+@backend("nerdfont")
+class NerdFont(Backend):
+    """A Nerd Font family from the nerd-fonts GitHub releases into ~/.local/share/fonts (Linux)."""
+
+    @property
+    def path(self) -> Path:
+        return Path.home() / ".local/share/fonts/NerdFonts" / self.pkg
+
+    def is_installed(self) -> bool:
+        return self.path.is_dir() and any(self.path.iterdir())
+
+    def install(self) -> None:
+        url = f"https://github.com/ryanoasis/nerd-fonts/releases/latest/download/{self.pkg}.zip"
+        with urllib.request.urlopen(url, timeout=120) as resp:
+            data = resp.read()
+        self.path.mkdir(parents=True, exist_ok=True)
+        with zipfile.ZipFile(io.BytesIO(data)) as z:
+            for name in z.namelist():
+                if name.lower().endswith((".ttf", ".otf")):
+                    (self.path / Path(name).name).write_bytes(z.read(name))
+        run("fc-cache -f >/dev/null 2>&1 || true")
+
+    def uninstall(self, snapshot: Any = None) -> None:
+        shutil.rmtree(self.path, ignore_errors=True)
+        run("fc-cache -f >/dev/null 2>&1 || true")

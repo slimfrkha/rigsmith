@@ -6,10 +6,14 @@ on:
   schedule:
     - cron: "0 3 * * *"
   workflow_dispatch:
+    inputs:
+      args:
+        description: "rigsmith filters, e.g. `-p standard` or `-c example`"
+        default: "-p standard"
 
 env:
-  # PRs: the minimal core. Nightly: the whole standard profile.
-  E2E_ARGS: ${{ github.event_name == 'schedule' && '-p standard' || '-p minimal -s system -s shell -s cli -s git' }}
+  # PRs: the minimal core. Nightly: the whole standard profile. Manual runs: whatever you pass.
+  E2E_ARGS: ${{ inputs.args || (github.event_name == 'schedule' && '-p standard') || '-p minimal -s system -s shell -s cli -s git' }}
 
 jobs:
   macos:
