@@ -38,7 +38,7 @@ if args.mode == "installed":
     print(f"installed: {len(plan.order)} artifacts, {len(pre)} pre-existing: {', '.join(pre)}")
 else:
     scope = {e.id for e in config.load(args.c).entries} & set(plan.order)
-    bad += [f"receipt left: {r.key}" for r in state.receipts.values() if r.artifact in scope]
+    bad += [f"receipt left: {r.key}" for r in state.receipts.values() if r.artifact in scope and r.op != NOOP]
     bad += [f"snippet left: {f.name}" for f in shell_d().glob("*")] if shell_d().exists() else []
     for i in json.loads(PRE.read_text()):
         if not cfg.library[i].present(p):

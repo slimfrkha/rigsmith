@@ -4,6 +4,12 @@ set -euo pipefail
 cd "$(dirname "$0")/../.."
 read -ra ARGS <<< "${E2E_ARGS:--p minimal -s system -s shell -s cli -s git}"
 rs() { uv run rigsmith "$@"; }
+dump_logs() {
+  echo "::group::rigsmith command log"
+  grep -hE '^(\$ |\[exit)' ~/.local/state/rigsmith/logs/* || true
+  echo "::endgroup::"
+}
+trap dump_logs ERR
 
 if [[ -f ~/.zshrc ]]; then cp ~/.zshrc /tmp/zshrc.before; else command rm -f /tmp/zshrc.before; fi
 
