@@ -1,0 +1,76 @@
+# rigsmith reference menu: every built-in artifact, in its canonical section and profile.
+# Fork it with `rigsmith init`, or point at a preset with `-c <preset>`.
+profiles: [minimal, standard, comprehensive]
+
+sections:
+  system:
+    bootstrap:
+      homebrew: minimal
+      apt-base: minimal
+  shell:
+    core:
+      zsh: minimal
+      zinit: minimal
+    prompt:
+      p10k: minimal
+      starship: minimal
+    plugins:
+      zsh-autosuggestions: minimal
+      zsh-syntax-highlighting: minimal
+      zsh-completions: standard
+      zsh-history-substring-search: standard
+      omz-plugins: standard
+    history:
+      atuin: standard
+    helpers:
+      shell-aliases: minimal
+      shell-functions: standard
+      shell-extras: comprehensive
+  cli:
+    files:
+      eza: minimal
+      eza-aliases: minimal
+      tree: standard
+      yazi: comprehensive
+    search:
+      ripgrep: minimal
+      ripgrep-aliases: minimal
+      fd: minimal
+      fd-aliases: standard
+      fzf: minimal
+    view-edit:
+      bat: minimal
+      bat-aliases: minimal
+      sd: standard
+      micro: standard
+      neovim: standard
+      helix: comprehensive
+    navigation:
+      zoxide: minimal
+    data:
+      jq: minimal
+      yq: standard
+    system:
+      htop: standard
+      bottom: comprehensive
+      dust: standard
+      duf: standard
+      procs: comprehensive
+      sys-aliases: standard
+    network:
+      httpie: standard
+      wget: standard
+    docs:
+      tldr: standard
+    misc:
+      watch: standard
+      tokei: comprehensive
+      hyperfine: comprehensive
+      thefuck: comprehensive
+  git:
+    core:
+      git: minimal
+      gh: standard
+      git-aliases: minimal
+    ui:
+      lazygit: standard

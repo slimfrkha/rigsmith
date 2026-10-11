@@ -256,7 +256,7 @@ icons = Question(
     text="Show icons in the terminal? (needs a Nerd Font)",
     choices={
         "yes": {"env": {"RIGSMITH_ICONS": "1"}},
-        "no":  {"exclude_tags": ["icons"]},
+        "no": {"exclude_tags": ["icons"]},
     },
 )
 ```
