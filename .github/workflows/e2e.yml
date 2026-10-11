@@ -11,11 +11,16 @@ on:
       args:
         description: "rigsmith filters, e.g. `-p standard` or `-c platform`"
         default: "-c platform"
+      os:
+        description: Where to run
+        type: choice
+        options: [both, ubuntu, macos]
+        default: both
 
 jobs:
   macos:
     # macOS minutes are billed 10x on private repos: pushes, PRs and manual runs only.
-    if: github.event_name != 'schedule'
+    if: github.event_name != 'schedule' && inputs.os != 'ubuntu'
     runs-on: macos-latest
     env:
       E2E_ARGS: ${{ inputs.args || '-p minimal -s system -s shell -s cli -s git' }}
@@ -27,6 +32,7 @@ jobs:
   ubuntu:
     # A bare container: exercises the Homebrew bootstrap, apt, chsh, as a non-root user (brew refuses root).
     # One job per preset keeps each container's disk use bounded.
+    if: inputs.os != 'macos'
     runs-on: ubuntu-latest
     container: ubuntu:24.04
     strategy:

@@ -32,7 +32,7 @@ and are built from sections.
 | **Artifact** | One installable unit: a package plus the **integration** config the tool needs to work (shell snippet, file, settings keys). Has an id, help text, sources, optional role/tags/requires/notes. Optional **opinions** (aliases, themes, preferred settings) are separate artifacts that `requires` the tool (§3). |
 | **Effect** | One concrete change an artifact makes: a package install, a snippet, a file, a settings key, a shell change, a script run. |
 | **Receipt** | The state record of one effect: what operation happened and before/after evidence. Uninstall works from receipts (§7). |
-| **Backend** | How something is installed: `Brew`, `Cask`, `Apt`, `Krew`, `VSCodeExt`, `UvTool`, `Script`, `GitClone`, `NerdFont`. One subclass per package manager. |
+| **Backend** | How something is installed: `Brew`, `Cask`, `Apt`, `Krew`, `VSCodeExt`, `UvTool`, `Script`, `GitClone`, `NerdFont`, `Release` (one binary from a release archive). One subclass per package manager. |
 | **Library** | All artifacts known to rigsmith: built-in + user-added. |
 | **Config (menu)** | YAML that scopes the library: which artifacts exist, how they're organized into sections/subsections, and which profile each belongs to. |
 | **Profile** | Depth level. Ordered and cumulative: `minimal ⊂ standard ⊂ comprehensive`. |
@@ -321,6 +321,8 @@ rigsmith gives two receipts: `package: noop` and `snippet: created`. Uninstall r
 
 - `scan` checks the **real system** (the artifact's `check`). Receipts say who owns the package:
   `✓ eza (managed)` · `✓ git (pre-existing)` · `✗ k9s` · `– iterm2 (n/a)`.
+- `uninstall` also takes the **dependencies the plan pulled in**, unless the user requested them explicitly
+  (state records requested artifacts) or another managed artifact still needs them, like `brew autoremove`.
 - `uninstall` reverses an artifact's receipts. For a pre-existing package, that removes rigsmith's snippets, files and
   keys and leaves the package. `--include-unmanaged` also removes packages rigsmith didn't install.
 - Uninstalling something others depend on warns: `⚠ needed by: atuin. Remove them too? [y/N]`.
@@ -511,7 +513,9 @@ rigsmith/
 2. **Library lint:** unique ids; every built-in artifact in `reference.yaml`; referenced snippets/files exist;
    `help` non-empty; `requires`/role/question refs resolve; every preset and `example.yaml` validates;
    presets pin every relevant answer; `docs/CATALOG.md` matches `gen_catalog.py` output.
-3. **E2E (CI):** ubuntu container (as a **non-root user with sudo**; brew refuses root) + macOS runner:
+3. **E2E (CI):** pushes and PRs run the minimal core; a weekly run installs every preset, one Ubuntu container
+   each (bounded disk); manual runs take any filters. macOS runs only on pushes and manual runs (billed 10× on
+   private repos). The cycle: ubuntu container (as a **non-root user with sudo**; brew refuses root) + macOS runner:
    `install -p minimal -y` → `scan` (all ✓) → **second `install -p minimal -y` reports 0 changes** →
    `uninstall -y` → `scan` (**managed** artifacts ✗, pre-existing ones untouched, `~/.zshrc` byte-identical to the
    original). Runners ship brew, git, jq…, so "all ✗" would be wrong.
@@ -555,6 +559,12 @@ not in the built-in library.
 - Legacy folders are deleted after slice 6.
 - README: one-line install, TUI GIF, the 4 commands, "add your own artifact", "write your own config with `init`".
   After slice 9: leads with "browse the catalog → pick a preset → `rigsmith install -c <preset>`".
+
+### Upstream drift
+
+Formulae get removed (tflint left Homebrew core over its license), extensions become built in (Copilot Chat).
+`scripts/check_sources.py` checks every name against the live formulae.brew.sh API and the VS Code Marketplace,
+weekly in CI (`sources.yml`), because local Homebrew metadata can be stale.
 
 ## Deferred
 
