@@ -71,3 +71,17 @@ def test_catalog_is_up_to_date():
     script = Path(__file__).resolve().parents[1] / "scripts/gen_catalog.py"
     r = subprocess.run([sys.executable, str(script), "--check"], capture_output=True, text=True)
     assert r.returncode == 0, r.stderr
+
+
+@pytest.mark.parametrize("name", config.presets())
+def test_presets_pin_every_answer(name):
+    """`rigsmith install -c <preset> -y` must not depend on library defaults (reproducible per version)."""
+    from rigsmith.plan import questions_for, roles_for
+
+    cfg = config.load(name)
+    needed = {"profile", *roles_for(cfg, cfg.ids), *(q.id for q in questions_for(cfg, cfg.ids))}
+    assert sorted(needed - cfg.answers.keys()) == []
+
+
+def test_there_are_presets():
+    assert len(config.presets()) >= 5

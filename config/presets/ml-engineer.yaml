@@ -1,0 +1,56 @@
+# ML engineer: Python with uv, notebooks, Hugging Face, local LLMs.
+# Fork it: rigsmith init --from ml-engineer    Use it: rigsmith install -c ml-engineer
+profiles: [minimal, standard, comprehensive]
+
+sections:
+  system:
+    bootstrap: {homebrew: minimal, apt-base: minimal}
+  shell:
+    core: {zsh: minimal, zinit: minimal}
+    prompt: {starship: minimal}
+    plugins: {zsh-autosuggestions: minimal, zsh-syntax-highlighting: minimal, zsh-completions: standard, zsh-history-substring-search: standard}
+    history: {atuin: standard}
+    helpers: {shell-aliases: minimal, shell-functions: standard}
+  terminal:
+    fonts: {meslo-nf: minimal, jetbrains-nf: standard}
+  cli:
+    files: {eza: minimal, eza-aliases: minimal, tree: standard}
+    search: {ripgrep: minimal, ripgrep-aliases: minimal, fd: minimal, fzf: minimal}
+    view-edit: {bat: minimal, bat-aliases: minimal, micro: minimal}
+    navigation: {zoxide: minimal}
+    data: {jq: minimal, yq: standard}
+    system: {htop: standard, dust: standard, duf: standard}
+    docs: {tldr: standard}
+  git:
+    core: {git: minimal, gh: minimal, git-aliases: minimal, git-defaults: minimal}
+    ui: {lazygit: standard, gitlens-ext: standard}
+    diff: {delta: standard}
+  dev:
+    tools: {just: standard, direnv: standard, mise: standard, pre-commit: standard}
+  editor:
+    vscode: {vscode: minimal, vscode-settings: standard, vscode-nerd-fonts: standard, catppuccin-vscode: standard, catppuccin-icons: standard, errorlens: standard}
+    config-files: {yaml-ext: standard, toml-ext: standard}
+    remote: {remote-ssh: standard, dev-containers: standard}
+  python:
+    tooling: {uv: minimal, python: minimal, ruff: minimal, ty: standard, python-aliases: minimal}
+    vscode: {python-ext: minimal, ruff-ext: minimal, ty-ext: standard, jupyter-ext: minimal}
+  ml:
+    notebooks: {jupyterlab: minimal, marimo: standard}
+    models: {huggingface-cli: minimal, ollama: standard, llm: comprehensive}
+  data:
+    terminal: {duckdb: standard, visidata: comprehensive}
+    files: {rainbow-csv: standard}
+  containers:
+    runtime: {colima: standard, docker-engine: standard}
+    tools: {docker-cli: standard}
+  cloud:
+    gcp: {gcloud: comprehensive}
+    aws: {awscli: comprehensive}
+
+answers:
+  profile: standard
+  icons: "yes"
+  aliases: "yes"
+  tui: "yes"
+  theme: catppuccin
+  container-runtime: colima

@@ -1,0 +1,32 @@
+# Headless server or VM: a comfortable shell and modern CLI over SSH. No fonts, editors or GUI apps.
+# Use it: rigsmith install -c server -y
+profiles: [minimal, standard, comprehensive]
+
+sections:
+  system:
+    bootstrap: {homebrew: minimal, apt-base: minimal}
+  shell:
+    core: {zsh: minimal, zinit: minimal}
+    prompt: {starship: minimal}
+    plugins: {zsh-autosuggestions: minimal, zsh-syntax-highlighting: minimal, zsh-completions: standard}
+    history: {atuin: standard}
+    helpers: {shell-aliases: minimal, shell-functions: standard}
+  cli:
+    files: {eza: minimal, eza-aliases: minimal, tree: minimal}
+    search: {ripgrep: minimal, fd: minimal, fzf: minimal}
+    view-edit: {bat: minimal, micro: minimal}
+    navigation: {zoxide: minimal}
+    data: {jq: minimal, yq: standard}
+    system: {htop: minimal, bottom: standard, dust: minimal, duf: minimal, procs: standard}
+    network: {httpie: standard, wget: minimal}
+    docs: {tldr: standard}
+  git:
+    core: {git: minimal, git-aliases: minimal, git-defaults: minimal}
+    ui: {lazygit: standard}
+
+answers:
+  profile: minimal
+  icons: "no"
+  aliases: "yes"
+  tui: "yes"
+  theme: none

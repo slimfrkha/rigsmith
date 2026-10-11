@@ -1,0 +1,49 @@
+# Web / full-stack JavaScript developer: Node, pnpm, Bun, Biome and the usual editor companions.
+# Fork it: rigsmith init --from web    Use it: rigsmith install -c web
+profiles: [minimal, standard, comprehensive]
+
+sections:
+  system:
+    bootstrap: {homebrew: minimal, apt-base: minimal}
+  shell:
+    core: {zsh: minimal, zinit: minimal}
+    prompt: {starship: minimal}
+    plugins: {zsh-autosuggestions: minimal, zsh-syntax-highlighting: minimal, zsh-completions: standard, zsh-history-substring-search: standard}
+    history: {atuin: standard}
+    helpers: {shell-aliases: minimal, shell-functions: standard}
+  terminal:
+    fonts: {meslo-nf: minimal, jetbrains-nf: standard}
+  cli:
+    files: {eza: minimal, eza-aliases: minimal, tree: standard}
+    search: {ripgrep: minimal, ripgrep-aliases: minimal, fd: minimal, fzf: minimal}
+    view-edit: {bat: minimal, bat-aliases: minimal, micro: minimal}
+    navigation: {zoxide: minimal}
+    data: {jq: minimal, yq: standard}
+    system: {htop: standard, dust: standard, duf: standard}
+    docs: {tldr: standard}
+  git:
+    core: {git: minimal, gh: minimal, git-aliases: minimal, git-defaults: minimal}
+    ui: {lazygit: standard, gitlens-ext: standard}
+    diff: {delta: standard}
+  dev:
+    tools: {just: standard, direnv: standard, mise: standard, pre-commit: standard}
+  editor:
+    vscode: {vscode: minimal, vscode-settings: standard, vscode-nerd-fonts: standard, catppuccin-vscode: standard, catppuccin-icons: standard, errorlens: standard}
+    config-files: {yaml-ext: standard, toml-ext: standard}
+    remote: {remote-ssh: standard, dev-containers: standard}
+  web:
+    tooling: {node: minimal, pnpm: minimal, bun: standard, deno: comprehensive, biome: standard, eslint-ext: minimal, prettier-ext: minimal, biome-ext: standard, tailwind-ext: standard, react-snippets: comprehensive, vue-ext: comprehensive, svelte-ext: comprehensive, auto-rename-tag: standard, color-highlight: standard}
+    api: {rest-client: standard}
+  backend:
+    apis: {mkcert: standard}
+  containers:
+    runtime: {colima: standard, docker-engine: standard}
+    tools: {docker-cli: standard, docker-ext: standard}
+
+answers:
+  profile: standard
+  icons: "yes"
+  aliases: "yes"
+  tui: "yes"
+  theme: catppuccin
+  container-runtime: colima

@@ -10,6 +10,27 @@ makes them work, then see what's installed and undo it cleanly.
 curl -fsSL https://raw.githubusercontent.com/slimfrkha/rigsmith/main/install.sh | sh -s -- install
 ```
 
+Or start from a preset for your kind of work:
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/slimfrkha/rigsmith/main/install.sh | sh -s -- install -c platform
+```
+
+| Preset | For |
+|---|---|
+| [`python`](config/presets/python.yaml) | uv + ruff + ty, notebooks, VS Code with the Astral stack |
+| [`backend-go`](config/presets/backend-go.yaml) | Go toolchain, containers, a local cluster, API and load-testing tools |
+| [`rust`](config/presets/rust.yaml) | rustup, bacon, nextest, rust-analyzer |
+| [`java`](config/presets/java.yaml) | OpenJDK, Maven, Gradle, the VS Code Java pack |
+| [`web`](config/presets/web.yaml) | Node, pnpm, Bun, Biome, ESLint/Prettier, Tailwind |
+| [`data-engineer`](config/presets/data-engineer.yaml) | Python + SQL in the terminal (DuckDB, Postgres, Kafka), notebooks, cloud CLIs |
+| [`ml-engineer`](config/presets/ml-engineer.yaml) | Python with uv, notebooks, Hugging Face, local LLMs |
+| [`platform`](config/presets/platform.yaml) | containers, Kubernetes end to end, Terraform and friends, GCP and AWS |
+| [`server`](config/presets/server.yaml) | a headless box over SSH: shell and modern CLI, no fonts or GUI apps |
+
+Every preset shares a sane base (zsh, starship, fzf, ripgrep, eza, zoxide, git, lazygit, VS Code) and pins
+all its answers, so `-y` gives the same result every time. Fork one with `rigsmith init --from <preset>`.
+
 A short questionnaire, a picker where you can tick or untick anything, a summary of exactly what will
 change, then one install after the other. **[Browse the catalog →](docs/CATALOG.md)** 220+ tools across
 shell, CLI, git, Python, Go, Rust, Java, JS, containers, Kubernetes, cloud, IaC, data, ML and VS Code.
@@ -90,9 +111,10 @@ A config is a menu: which artifacts are in scope, in which section, at which pro
 |---|---|
 | [`config/reference.yaml`](config/reference.yaml) | The whole library. Used when you have no config of your own. |
 | [`config/example.yaml`](config/example.yaml) | The author's setup (zsh, k9s, GCP, Terraform, VS Code), with every answer pinned. |
+| [`config/presets/`](config/presets) | Curated menus per developer type (table above). |
 | `~/.config/rigsmith/config.yaml` | Yours, written by `rigsmith init`. Used automatically when it exists. |
 
-`-c` takes a path or a bundled name: `rigsmith install -c example`.
+`-c` takes a path or a bundled name: `rigsmith install -c example`, `rigsmith install -c ml-engineer`.
 
 ```yaml
 profiles: [minimal, standard, comprehensive]

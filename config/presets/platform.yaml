@@ -1,0 +1,61 @@
+# Platform / SRE / DevOps engineer: containers, Kubernetes end to end, Terraform and friends, GCP and AWS.
+# Fork it: rigsmith init --from platform    Use it: rigsmith install -c platform
+profiles: [minimal, standard, comprehensive]
+
+sections:
+  system:
+    bootstrap: {homebrew: minimal, apt-base: minimal}
+  shell:
+    core: {zsh: minimal, zinit: minimal}
+    prompt: {starship: minimal}
+    plugins: {zsh-autosuggestions: minimal, zsh-syntax-highlighting: minimal, zsh-completions: standard, zsh-history-substring-search: standard}
+    history: {atuin: standard}
+    helpers: {shell-aliases: minimal, shell-functions: standard}
+  terminal:
+    fonts: {meslo-nf: minimal, jetbrains-nf: standard}
+  cli:
+    files: {eza: minimal, eza-aliases: minimal, tree: standard}
+    search: {ripgrep: minimal, ripgrep-aliases: minimal, fd: minimal, fzf: minimal}
+    view-edit: {bat: minimal, bat-aliases: minimal, micro: minimal}
+    navigation: {zoxide: minimal}
+    data: {jq: minimal, yq: standard}
+    system: {htop: standard, dust: standard, duf: standard}
+    docs: {tldr: standard}
+  git:
+    core: {git: minimal, gh: minimal, git-aliases: minimal, git-defaults: minimal}
+    ui: {lazygit: standard, gitlens-ext: standard}
+    diff: {delta: standard}
+  dev:
+    tools: {just: standard, direnv: standard, mise: standard, pre-commit: standard}
+  editor:
+    vscode: {vscode: minimal, vscode-settings: standard, vscode-nerd-fonts: standard, catppuccin-vscode: standard, catppuccin-icons: standard, errorlens: standard}
+    config-files: {yaml-ext: standard, toml-ext: standard}
+    remote: {remote-ssh: standard, dev-containers: standard}
+  containers:
+    runtime: {colima: minimal, docker-engine: minimal}
+    tools: {docker-cli: minimal, docker-aliases: minimal, dive: standard, lazydocker: standard, docker-ext: standard}
+  kubernetes:
+    core: {kubectl: minimal, kubectx: minimal, k8s-aliases: minimal, helm: minimal, helm-aliases: minimal, k8s-ext: standard, helm-ext: standard}
+    ui: {k9s: minimal}
+    logs: {stern: minimal}
+    manifests: {kustomize: standard}
+    plugins: {krew: standard, krew-neat: standard, krew-tree: standard, krew-get-all: comprehensive}
+    validate: {kubeconform: standard, popeye: comprehensive, kube-score: comprehensive}
+    local: {kind: standard}
+    gitops: {argocd: comprehensive}
+  cloud:
+    gcp: {gcloud: minimal, gke-auth-plugin: minimal, gcp-aliases: standard}
+    aws: {awscli: minimal, aws-ext: comprehensive}
+  iac:
+    terraform: {terraform: minimal, tflint: standard, terraform-aliases: minimal, terraform-ext: standard, terragrunt: standard, trivy: standard, infracost: comprehensive, opentofu: comprehensive}
+    hashicorp: {packer: comprehensive, vault: comprehensive}
+    other: {ansible: comprehensive, ansible-ext: comprehensive}
+    secrets: {sops: standard, age: standard}
+
+answers:
+  profile: standard
+  icons: "yes"
+  aliases: "yes"
+  tui: "yes"
+  theme: catppuccin
+  container-runtime: colima

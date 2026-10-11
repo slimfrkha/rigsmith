@@ -1,0 +1,44 @@
+# Rust developer: rustup toolchain, fast test and check loops, rust-analyzer.
+# Fork it: rigsmith init --from rust    Use it: rigsmith install -c rust
+profiles: [minimal, standard, comprehensive]
+
+sections:
+  system:
+    bootstrap: {homebrew: minimal, apt-base: minimal}
+  shell:
+    core: {zsh: minimal, zinit: minimal}
+    prompt: {starship: minimal}
+    plugins: {zsh-autosuggestions: minimal, zsh-syntax-highlighting: minimal, zsh-completions: standard, zsh-history-substring-search: standard}
+    history: {atuin: standard}
+    helpers: {shell-aliases: minimal, shell-functions: standard}
+  terminal:
+    fonts: {meslo-nf: minimal, jetbrains-nf: standard}
+  cli:
+    files: {eza: minimal, eza-aliases: minimal, tree: standard}
+    search: {ripgrep: minimal, ripgrep-aliases: minimal, fd: minimal, fzf: minimal}
+    view-edit: {bat: minimal, bat-aliases: minimal, micro: minimal}
+    navigation: {zoxide: minimal}
+    data: {jq: minimal, yq: standard}
+    system: {htop: standard, dust: standard, duf: standard}
+    docs: {tldr: standard}
+    misc: {hyperfine: standard, tokei: standard}
+  git:
+    core: {git: minimal, gh: minimal, git-aliases: minimal, git-defaults: minimal}
+    ui: {lazygit: standard, gitlens-ext: standard}
+    diff: {delta: standard}
+  dev:
+    tools: {just: standard, direnv: standard, mise: standard, pre-commit: standard, watchexec: standard}
+  editor:
+    vscode: {vscode: minimal, vscode-settings: standard, vscode-nerd-fonts: standard, catppuccin-vscode: standard, catppuccin-icons: standard, errorlens: standard}
+    config-files: {yaml-ext: standard, toml-ext: standard}
+    remote: {remote-ssh: standard, dev-containers: standard}
+  rust:
+    toolchain: {rustup: minimal, bacon: minimal, cargo-nextest: standard, sccache: comprehensive}
+    vscode: {rust-analyzer-ext: minimal}
+
+answers:
+  profile: standard
+  icons: "yes"
+  aliases: "yes"
+  tui: "yes"
+  theme: catppuccin

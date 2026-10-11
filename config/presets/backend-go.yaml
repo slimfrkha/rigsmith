@@ -1,0 +1,56 @@
+# Go backend developer: Go toolchain, containers, a local cluster, API and load-testing tools.
+# Fork it: rigsmith init --from backend-go    Use it: rigsmith install -c backend-go
+profiles: [minimal, standard, comprehensive]
+
+sections:
+  system:
+    bootstrap: {homebrew: minimal, apt-base: minimal}
+  shell:
+    core: {zsh: minimal, zinit: minimal}
+    prompt: {starship: minimal}
+    plugins: {zsh-autosuggestions: minimal, zsh-syntax-highlighting: minimal, zsh-completions: standard, zsh-history-substring-search: standard}
+    history: {atuin: standard}
+    helpers: {shell-aliases: minimal, shell-functions: standard}
+  terminal:
+    fonts: {meslo-nf: minimal, jetbrains-nf: standard}
+  cli:
+    files: {eza: minimal, eza-aliases: minimal, tree: standard}
+    search: {ripgrep: minimal, ripgrep-aliases: minimal, fd: minimal, fzf: minimal}
+    view-edit: {bat: minimal, bat-aliases: minimal, micro: minimal}
+    navigation: {zoxide: minimal}
+    data: {jq: minimal, yq: standard}
+    system: {htop: standard, dust: standard, duf: standard}
+    docs: {tldr: standard}
+  git:
+    core: {git: minimal, gh: minimal, git-aliases: minimal, git-defaults: minimal}
+    ui: {lazygit: standard, gitlens-ext: standard}
+    diff: {delta: standard}
+  dev:
+    tools: {just: standard, direnv: standard, mise: standard, pre-commit: standard}
+  editor:
+    vscode: {vscode: minimal, vscode-settings: standard, vscode-nerd-fonts: standard, catppuccin-vscode: standard, catppuccin-icons: standard, errorlens: standard}
+    config-files: {yaml-ext: standard, toml-ext: standard}
+    remote: {remote-ssh: standard, dev-containers: standard}
+  go:
+    toolchain: {go: minimal, gopls: minimal, delve: minimal, golangci-lint: standard, goreleaser: comprehensive}
+    vscode: {go-ext: minimal}
+  containers:
+    runtime: {colima: minimal, docker-engine: minimal}
+    tools: {docker-cli: minimal, docker-aliases: minimal, lazydocker: standard, docker-ext: standard}
+  kubernetes:
+    core: {kubectl: standard, kubectx: standard, k8s-aliases: standard}
+    ui: {k9s: standard}
+    local: {kind: comprehensive}
+  backend:
+    apis: {grpcurl: standard, mkcert: standard, websocat: comprehensive}
+    load: {oha: standard, k6: comprehensive}
+  data:
+    terminal: {pgcli: standard}
+
+answers:
+  profile: standard
+  icons: "yes"
+  aliases: "yes"
+  tui: "yes"
+  theme: catppuccin
+  container-runtime: colima
