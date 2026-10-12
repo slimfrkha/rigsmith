@@ -18,6 +18,7 @@ from rigsmith.state import NOOP, State
 
 ap = argparse.ArgumentParser()
 ap.add_argument("mode", choices=["installed", "uninstalled"])
+ap.add_argument("ids", nargs="*")
 ap.add_argument("-c")
 ap.add_argument("-p")
 ap.add_argument("-s", action="append", default=[])
@@ -25,7 +26,7 @@ args = ap.parse_args()
 
 ensure_path()
 cfg, p, state = config.load(args.c), Platform.detect(), State()
-plan = build(cfg, p, profile=args.p, sections=args.s)
+plan = build(cfg, p, ids=args.ids, profile=args.p, sections=args.s)
 PRE = Path("/tmp/rigsmith-preexisting.json")
 bad = []
 
