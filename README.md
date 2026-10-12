@@ -182,15 +182,7 @@ primary package manager on both, with apt for the few things that need it. zsh o
 
 ## Development
 
-```sh
-uv sync
-uv run pytest                        # unit, library lint, CLI and TUI tests (never touch your machine)
-uv run ruff check . && uv run ty check src
-uv run python scripts/check_sources.py   # every brew name and VS Code extension id exists
-```
-
-The real install/uninstall cycle runs in CI only ([e2e.yml](.github/workflows/e2e.yml)): never run
-`tests/e2e/run.sh` on a machine you care about.
+See [CONTRIBUTING.md](CONTRIBUTING.md): setup and tests, adding an artifact, end-to-end tests, releasing.
 
 ## License
 

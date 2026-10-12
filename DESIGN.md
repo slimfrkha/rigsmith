@@ -569,4 +569,4 @@ weekly in CI (`sources.yml`), because local Homebrew metadata can be stale.
 ## Deferred
 
 Bash support · dnf/pacman backends · JSONC comment preservation · cheatsheet printing (`scan --verbose`) ·
-CONTRIBUTING / CHANGELOG / docs site · remote configs (`-c https://…`).
+CHANGELOG (GitHub releases carry generated notes) / docs site · remote configs (`-c https://…`).
