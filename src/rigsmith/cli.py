@@ -13,14 +13,11 @@ from rich.console import Console
 from rich.text import Text
 
 from rigsmith import config as cfgmod
-from rigsmith import (
-    library,  # noqa: F401  (registers built-in artifacts)
-    reconcile,
-)
+from rigsmith import library  # noqa: F401  (registers built-in artifacts)
 from rigsmith.config import Config, ConfigError, Entry
 from rigsmith.model import Platform, ensure_path
 from rigsmith.plan import Plan, active_providers, build, dependents, inactive_providers, select, toposort, with_orphans
-from rigsmith.runner import Result, Runner, effects_for, pending, status
+from rigsmith.runner import Result, Runner, pending, status
 from rigsmith.script import install_script, uninstall_script
 from rigsmith.shell import conflicts
 from rigsmith.state import NOOP, State
@@ -176,15 +173,6 @@ def scan(
 
 
 # ── install ──────────────────────────────────────────────────────────────────
-
-
-def preexisting_package(cfg: Config, id: str, p: Platform, state: State) -> bool:
-    """Would uninstall leave this artifact's package alone because it was there before rigsmith?"""
-    effs = {e.key: e for e in effects_for(cfg.library[id], p, state.answers)} if id in cfg.library else {}
-    return any(
-        d.action == reconcile.FORGET and r is not None and r.op == NOOP and r.key.startswith("pkg:")
-        for _, r, d in reconcile.undo(id, effs, state, include_unmanaged=False)
-    )
 
 
 def plan_report(cfg: Config, plan: Plan, p: Platform) -> list[str]:
@@ -345,7 +333,7 @@ def uninstall(
         if needed := dependents(cfg.library, i, installed_elsewhere):
             console.print(f"[yellow]⚠ {i} is needed by: {', '.join(needed)} (they stay installed)[/]")
     if not include_unmanaged:
-        kept = [i for i in order if preexisting_package(cfg, i, p, state)]
+        kept = [i for i in order if any(r.op == NOOP and r.key.startswith("pkg:") for r in state.for_artifact(i))]
         if kept:
             console.print("[dim]Pre-existing packages left alone: " + ", ".join(kept) + "[/]")
     if dry_run:

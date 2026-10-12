@@ -6,12 +6,12 @@ import pytest
 
 from rigsmith import config, library  # noqa: F401  (registers built-in artifacts)
 from rigsmith import reconcile as rc
-from rigsmith.effects import Effect
+from rigsmith.effects import Effect, PackageEffect
 from rigsmith.model import Platform
 from rigsmith.plan import Plan
 from rigsmith.runner import Runner
 from rigsmith.script import install_script
-from rigsmith.state import CREATED, IRREVERSIBLE, MODIFIED, NOOP, Receipt
+from rigsmith.state import CREATED, IRREVERSIBLE, MODIFIED, NOOP, Receipt, State
 
 
 class FakeEffect(Effect):
@@ -76,6 +76,17 @@ UNDO = [
 def test_undo_decisions(case, effect, rec, unmanaged, action, backup):
     d = rc.decide_undo(effect, rec, unmanaged)
     assert (d.action, d.backup) == (action, backup)
+
+
+class FakePackage(FakeEffect, PackageEffect):
+    def __init__(self, cur):
+        super().__init__(cur=cur, want="present", key="pkg:a")
+
+
+@pytest.mark.parametrize("cur, expected", [("present", [rc.UNDO]), (None, [])], ids=["installed", "not installed"])
+def test_include_unmanaged_removes_a_never_touched_package_only_if_installed(home, cur, expected):
+    decisions = rc.undo("a", {"pkg:a": FakePackage(cur)}, State(), include_unmanaged=True)
+    assert [d.action for _, _, d in decisions] == expected
 
 
 MENU = """
