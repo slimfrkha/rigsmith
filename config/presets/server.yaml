@@ -13,7 +13,7 @@ sections:
     helpers: {shell-aliases: minimal, shell-functions: standard}
   cli:
     files: {eza: minimal, eza-aliases: minimal, tree: minimal}
-    search: {ripgrep: minimal, fd: minimal, fzf: minimal}
+    search: {ripgrep: minimal, fd: minimal, fzf: minimal, fzf-functions: standard}
     view-edit: {bat: minimal, micro: minimal}
     navigation: {zoxide: minimal}
     data: {jq: minimal, yq: standard}

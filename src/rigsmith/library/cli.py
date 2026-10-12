@@ -27,7 +27,13 @@ tool("ripgrep", "rg: recursive grep that respects .gitignore, extremely fast.", 
 snippet("ripgrep-aliases", "grep → rg, plus rgi/rgl/rgc/rgh.", 70, requires=["ripgrep"], tags=["aliases"])
 tool("fd", "Simple, fast find. `fd pattern`, `fd -e py`.")
 tool("peco", "Interactive filter for any list: `ls | peco`, `kubectl get pods | peco`.")
-snippet("fd-aliases", "fdi/fdh/fde shortcuts for fd.", 70, requires=["fd"], tags=["aliases"])
+snippet("fd-aliases", "find → fd, plus fdi/fdh/fde.", 70, requires=["fd"], tags=["aliases"])
+snippet(
+    "fzf-functions",
+    "fzf helpers: rgs (search contents with preview), fkill (pick processes to kill), fp (find a file with preview).",
+    70,
+    requires=["fzf", "ripgrep", "bat"],
+)
 tool(
     "fzf",
     "The fuzzy finder. Ctrl+T files, Alt+C dirs, ** <Tab> fuzzy completion. Uses fd and bat when present.",

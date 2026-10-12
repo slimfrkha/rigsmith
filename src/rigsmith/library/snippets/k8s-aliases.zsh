@@ -16,7 +16,7 @@ alias kdelf='kubectl delete -f'
 alias kdiff='kubectl diff -f'
 alias k9='k9s'
 alias k9a='k9s -A'
-alias st='stern'
+(( $+commands[stern] )) && alias st='stern'
 
 kctx() {
   local ctx

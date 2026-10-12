@@ -15,7 +15,7 @@ sections:
     fonts: {meslo-nf: minimal, jetbrains-nf: standard}
   cli:
     files: {eza: minimal, eza-aliases: minimal, tree: standard}
-    search: {ripgrep: minimal, ripgrep-aliases: minimal, fd: minimal, fzf: minimal}
+    search: {ripgrep: minimal, ripgrep-aliases: minimal, fd: minimal, fzf: minimal, fzf-functions: standard}
     view-edit: {bat: minimal, bat-aliases: minimal, micro: minimal}
     navigation: {zoxide: minimal}
     data: {jq: minimal, yq: standard}

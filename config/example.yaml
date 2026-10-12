@@ -29,7 +29,7 @@ sections:
 
   cli:
     files: {eza: minimal, eza-aliases: minimal, yazi: comprehensive}
-    search: {ripgrep: minimal, ripgrep-aliases: minimal, fd: minimal, fd-aliases: minimal, fzf: minimal, peco: standard}
+    search: {ripgrep: minimal, ripgrep-aliases: minimal, fd: minimal, fd-aliases: minimal, fzf: minimal, fzf-functions: minimal, peco: standard}
     view-edit: {bat: minimal, bat-aliases: minimal, micro: minimal}
     navigation: {zoxide: minimal}
     data: {jq: minimal, yq: standard}

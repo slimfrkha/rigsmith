@@ -52,6 +52,7 @@ sections:
       fd-aliases: standard
       peco: comprehensive
       fzf: minimal
+      fzf-functions: standard
     view-edit:
       bat: minimal
       bat-aliases: minimal
