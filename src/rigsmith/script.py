@@ -6,13 +6,13 @@ It's for seeing under the hood. Running it yourself bypasses receipts, so rigsmi
 from datetime import datetime
 from importlib.metadata import PackageNotFoundError, version
 
+from rigsmith import reconcile
 from rigsmith.config import Config, label
 from rigsmith.effects import shell_d
 from rigsmith.model import Platform
 from rigsmith.plan import Plan
-from rigsmith.runner import effects_for, generic_effect, pending, prefs_env
-from rigsmith.shell import CORE, core_effects
-from rigsmith.state import IRREVERSIBLE, NOOP, State
+from rigsmith.runner import effects_for
+from rigsmith.state import State
 
 WARNING = """\
 # ┌──────────────────────────────────────────────────────────────────────────────────────────────┐
@@ -53,20 +53,23 @@ def install_script(cfg: Config, plan: Plan, p: Platform, command: str) -> str:
     done = []
     for i in plan.order:
         art = cfg.library[i]
-        effs = pending(art, p, state, plan.answers)
-        if not effs:
+        decided = list(reconcile.install(effects_for(art, p, plan.answers), state))
+        if not any(d.changes for _, d in decided):
             done.append(i)
             continue
         why = "" if plan.reasons[i] == "selected" else f" ({plan.reasons[i]})"
         lines = [f"# {art.help}"]
-        for e in effs:
-            if not e.reversible:
-                lines.append("# can't be undone by `rigsmith uninstall`:")
-            lines += e.sh()
+        for e, d in decided:
+            if d.action == reconcile.KEEP:
+                lines.append(f"# {d.reason}")
+            elif d.changes:
+                if not e.reversible:
+                    lines.append("# can't be undone by `rigsmith uninstall`:")
+                lines += e.sh()
         out += _section(f"{i}{why}", lines)
     if any(cfg.library[i].snippets for i in plan.order) or any(shell_d().glob("*.zsh")):
         answers = {**state.answers, **plan.answers}
-        core = [line for e in core_effects(prefs_env(answers)) if e.current() != e.desired() for line in e.sh()]
+        core = [line for e, d in reconcile.shell_integration(answers, state) if d.changes for line in e.sh()]
         if core:
             out += _section("shell integration: preferences, init.zsh, the ~/.zshrc block", core)
     if done:
@@ -76,46 +79,33 @@ def install_script(cfg: Config, plan: Plan, p: Platform, command: str) -> str:
     return "\n".join(out) + "\n"
 
 
+def _undo_lines(decisions) -> tuple[list[str], set[str]]:
+    lines, removed = [], set()
+    for e, r, d in decisions:
+        if d.action == reconcile.UNDO and e is not None:
+            lines += e.undo_sh(d.backup)
+            if r is not None and r.key.startswith("file:") and r.key[5:].startswith(str(shell_d())):
+                removed.add(r.key[5:])
+        elif d.reason:
+            lines.append(f"# {d.reason}")
+    return lines, removed
+
+
 def uninstall_script(cfg: Config, order: list[str], p: Platform, include_unmanaged: bool, command: str) -> str:
-    """The undo, read from receipts: only what rigsmith did, and only if it's still what rigsmith left."""
+    """The undo, from the same decisions `rigsmith uninstall` acts on."""
     state = State()
     out = _header(cfg, p, command)
     removed_snippets: set[str] = set()
     for i in order:
         art = cfg.library.get(i)
         effs = {e.key: e for e in effects_for(art, p, state.answers)} if art else {}
-        lines = []
-        receipts = list(reversed(state.for_artifact(i)))
-        for r in receipts:
-            e = effs.get(r.key) or generic_effect(r)
-            if e is None:
-                lines.append(f"# {r.key}: no way to undo it")
-            elif r.op == NOOP:
-                if include_unmanaged and r.key.startswith("pkg:"):
-                    lines += e.undo_sh(None)
-                else:
-                    lines.append(f"# {e.label}: was there before rigsmith, kept")
-            elif r.op == IRREVERSIBLE:
-                lines.append(f"# {e.label}: can't be undone")
-            elif e.current() == r.after:
-                lines += e.undo_sh(r.backup)
-                if r.key.startswith("file:") and r.key[5:].startswith(str(shell_d())):
-                    removed_snippets.add(r.key[5:])
-            elif e.current() is not None:
-                lines.append(f"# {e.label}: changed since install, kept")
-        if include_unmanaged and not any(r.key.startswith("pkg:") for r in receipts):
-            lines += [
-                line for e in effs.values() if e.key.startswith("pkg:") and e.current() for line in e.undo_sh(None)
-            ]
+        lines, removed = _undo_lines(reconcile.undo(i, effs, state, include_unmanaged))
+        removed_snippets |= removed
         if lines:
             out += _section(i, lines)
     remaining = {str(f) for f in shell_d().glob("*.zsh") if not f.name.startswith("01-rigsmith-prefs")}
     if not remaining - removed_snippets:  # the last snippet goes: so do prefs, init.zsh and the ~/.zshrc block
-        core = []
-        for r in reversed(state.for_artifact(CORE)):
-            e = generic_effect(r)
-            if e and r.op != NOOP and e.current() == r.after:
-                core += e.undo_sh(r.backup)
+        core, _ = _undo_lines(reconcile.undo_shell_integration(state))
         if core:
             out += _section("shell integration (no rigsmith snippet left)", core)
     return "\n".join(out) + "\n"

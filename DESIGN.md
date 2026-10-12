@@ -31,6 +31,7 @@ machine. Flags, config keys and fields are in the [reference](docs/reference.md)
 | **Question** | A questionnaire entry whose answer sets environment preferences, skips tagged artifacts, or fills a placeholder. |
 | **Effect** | One concrete change: a package install, a snippet, a file, a settings key, a login-shell change, a one-time script. |
 | **Receipt** | The record of one effect: what happened, with before/after evidence. Uninstall works from receipts. |
+| **Decision** | What rigsmith will do with one effect, and why, given its receipt: apply, update, skip, keep (changed since install), undo, or run once. Install, uninstall, `--dry-run` and `--script` all act on the same decisions. |
 
 ## Configs: the menu
 
@@ -142,6 +143,11 @@ without engine changes.
 
 ### Receipts
 
+Every rule below lives in one module, `reconcile.py`, which turns an effect plus its receipt into a **decision**.
+The runner executes decisions, `--script` renders them as shell and `--dry-run` as text, so a preview can't
+contradict a real run (a test runs both and compares the results). Decisions are made one effect at a time, right
+before it's executed, so a package pulled in by an earlier step is seen as already there.
+
 Ownership is recorded **per effect**, not per artifact. eza installed earlier with apt, plus a snippet rigsmith wrote,
 gives two receipts: `package: noop` and `snippet: created`. Uninstall removes the snippet and leaves eza.
 
@@ -225,7 +231,8 @@ src/rigsmith/
   effects.py      package / file / login-shell / one-time effects
   settings.py     VS Code settings.json and git config effects
   state.py        receipts, requested artifacts, remembered answers
-  runner.py       install / uninstall from receipts, status, sudo, logs
+  reconcile.py    decisions: every receipt rule, one place (install, uninstall, dry-run, --script act on them)
+  runner.py       executes decisions: install / uninstall, status, sudo, logs
   shell.py        ~/.zshrc block, init.zsh, prefs, overlap warnings
   tui.py          start-from menu, questionnaire, picker, confirm
   library/        artifacts by section; snippets/*.zsh; files/

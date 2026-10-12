@@ -13,7 +13,10 @@ from rich.console import Console
 from rich.text import Text
 
 from rigsmith import config as cfgmod
-from rigsmith import library  # noqa: F401  (registers built-in artifacts)
+from rigsmith import (
+    library,  # noqa: F401  (registers built-in artifacts)
+    reconcile,
+)
 from rigsmith.config import Config, ConfigError, Entry
 from rigsmith.model import Platform, ensure_path
 from rigsmith.plan import Plan, active_providers, build, dependents, inactive_providers, select, toposort, with_orphans
@@ -175,6 +178,15 @@ def scan(
 # ── install ──────────────────────────────────────────────────────────────────
 
 
+def preexisting_package(cfg: Config, id: str, p: Platform, state: State) -> bool:
+    """Would uninstall leave this artifact's package alone because it was there before rigsmith?"""
+    effs = {e.key: e for e in effects_for(cfg.library[id], p, state.answers)} if id in cfg.library else {}
+    return any(
+        d.action == reconcile.FORGET and r is not None and r.op == NOOP and r.key.startswith("pkg:")
+        for _, r, d in reconcile.undo(id, effs, state, include_unmanaged=False)
+    )
+
+
 def plan_report(cfg: Config, plan: Plan, p: Platform) -> list[str]:
     """The diff screen as markup lines: answers, already in place, to install, caveats."""
     state = State()
@@ -333,15 +345,7 @@ def uninstall(
         if needed := dependents(cfg.library, i, installed_elsewhere):
             console.print(f"[yellow]⚠ {i} is needed by: {', '.join(needed)} (they stay installed)[/]")
     if not include_unmanaged:
-        kept = [
-            i
-            for i in order
-            if any(
-                (r := state.get(e.key)) and r.op == NOOP
-                for e in effects_for(cfg.library[i], p)
-                if e.key.startswith("pkg:")
-            )
-        ]
+        kept = [i for i in order if preexisting_package(cfg, i, p, state)]
         if kept:
             console.print("[dim]Pre-existing packages left alone: " + ", ".join(kept) + "[/]")
     if dry_run:

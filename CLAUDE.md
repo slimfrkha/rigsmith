@@ -35,7 +35,8 @@ Library changes also need `uv run python scripts/gen_catalog.py` (regenerate doc
 | `src/rigsmith/backends.py` | one class per package manager (Brew, Cask, Apt, Release, VSCodeExt, …) |
 | `src/rigsmith/plan.py` | filters → questions → roles → dependency closure → order |
 | `src/rigsmith/effects.py`, `settings.py` | what an artifact changes, each able to report/apply/restore |
-| `src/rigsmith/runner.py`, `state.py` | install/uninstall driven by receipts |
+| `src/rigsmith/reconcile.py` | decisions: every receipt rule (install, uninstall, dry-run and `--script` share them) |
+| `src/rigsmith/runner.py`, `state.py` | executes decisions; receipts on disk |
 | `src/rigsmith/shell.py` | the `~/.zshrc` block, `init.zsh`, `shell.d/` |
 | `src/rigsmith/tui.py` | Textual questionnaire, picker, confirm |
 | `src/rigsmith/library/` | built-in artifacts, one module per section; `snippets/*.zsh` |
