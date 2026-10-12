@@ -33,7 +33,7 @@ bad = []
 
 if args.mode == "installed":
     for i in plan.order:
-        if (st := status(cfg.library[i], p)) != "installed":
+        if (st := status(cfg.library[i], p, state.answers)) != "installed":
             bad.append(f"{i}: {st}")
     if "git-defaults" in plan.order:  # run.sh pre-set it to `trunk`: install must have modified it
         branch = subprocess.run(["git", "config", "--global", "init.defaultBranch"], capture_output=True, text=True)

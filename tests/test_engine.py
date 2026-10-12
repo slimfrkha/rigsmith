@@ -4,7 +4,7 @@ from rigsmith import config, library  # noqa: F401  (registers questions)
 from rigsmith.backends import Apt, Brew
 from rigsmith.config import ConfigError
 from rigsmith.model import Artifact, File, Platform, Snippet
-from rigsmith.plan import select
+from rigsmith.plan import build, select
 
 MAC = Platform("darwin", "macos", "14.4", "arm64")
 NOBLE = Platform("linux", "ubuntu", "24.04", "x86_64")
@@ -194,3 +194,18 @@ def test_release_backend_installs_one_binary(tmp_path, home, kind):
     assert rel.is_installed() and (home / ".local/bin/tool").read_bytes() == payload
     rel.uninstall()
     assert not rel.is_installed()
+
+
+def test_text_questions_render_normalize_and_remember():
+    from rigsmith.model import QUESTIONS, render
+
+    assert render("gitdir:{{work-dir}}", {"work-dir": "~/w/"}) == "gitdir:~/w/"
+    assert render("{{unknown}}", {}) == "{{unknown}}"
+    assert QUESTIONS["work-dir"].clean(" ~/code/work ") == "~/code/work/"
+    cfg = menu("profiles: [minimal]\nsections:\n  git:\n    core: {git-identities: minimal}\n")
+    plan = build(cfg, MAC, remembered={"work-dir": "~/jobs/", "work-email": "me@jobs.io"})
+    assert plan.answers["work-dir"] == "~/jobs/" and plan.answers["work-email"] == "me@jobs.io"
+    plan = build(cfg, MAC, answers={"work-dir": "~/elsewhere"}, remembered={"work-dir": "~/jobs/"})
+    assert plan.answers["work-dir"] == "~/elsewhere/"  # explicit beats remembered, and gets normalized
+    cfg.answers = {"work-dir": "any/path/at/all"}
+    assert config.validate(cfg) == []  # text answers aren't checked against choices

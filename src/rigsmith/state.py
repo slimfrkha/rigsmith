@@ -27,6 +27,7 @@ class State:
         data = json.loads(self.path.read_text()) if self.path.exists() else {}
         self.receipts: dict[str, Receipt] = {r["key"]: Receipt(**r) for r in data.get("receipts", [])}
         self.requested: set[str] = set(data.get("requested", []))  # selected by the user, not pulled in
+        self.answers: dict[str, str] = data.get("answers", {})  # last questionnaire answers, reused as defaults
 
     def get(self, key: str) -> Receipt | None:
         return self.receipts.get(key)
@@ -53,6 +54,7 @@ class State:
                 {
                     "version": 1,
                     "requested": sorted(self.requested),
+                    "answers": self.answers,
                     "receipts": [asdict(r) for r in self.receipts.values()],
                 },
                 indent=1,

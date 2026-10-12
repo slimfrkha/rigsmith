@@ -35,3 +35,18 @@ Question(
     choices={"catppuccin": {"env": {"RIGSMITH_THEME": "catppuccin"}}, "none": {"exclude_tags": ["theme"]}},
     default="catppuccin",
 )
+Question(
+    id="work-dir",
+    kind="text",
+    text="Folder that holds your work repositories",
+    help="Every git repo under it commits with your work identity; everything else keeps your global one.",
+    default="~/work/",
+    normalize=lambda v: v.rstrip("/") + "/",  # git only matches subfolders when the pattern ends with /
+)
+Question(
+    id="work-email",
+    kind="text",
+    text="Your work email for git commits",
+    help="Leave empty to set it later: git config --file ~/.gitconfig-work user.email you@company.com",
+    default="",
+)

@@ -219,3 +219,40 @@ def test_package_pulled_in_by_an_earlier_step_is_owned_not_preexisting(cfg):
     assert State().get("pkg:beta").op == "created"
     uninstall(cfg, ["alpha", "beta"])
     assert INSTALLED == set()
+
+
+def test_git_identities_really_switch_by_folder(home):
+    import subprocess
+
+    from rigsmith.model import ARTIFACTS
+    from rigsmith.plan import Plan
+
+    c = config.parse(
+        config.yaml().load("profiles: [minimal]\nsections:\n  git:\n    core: {git-identities: minimal}\n")
+    )
+    answers = {"work-dir": "~/w/", "work-email": "me@work.io"}
+    plan = Plan(order=["git-identities"], reasons={"git-identities": "selected"}, answers=answers, env={})
+    res = Runner(P, say=lambda _: None).install(c, plan)  # deps left out on purpose: never install real packages
+    assert not res.failed, res.failed
+    assert status(ARTIFACTS["git-identities"], P, answers) == "installed"
+
+    def email(where):
+        where.mkdir(parents=True, exist_ok=True)
+        subprocess.run(["git", "init", "-q"], cwd=where, check=True)
+        out = subprocess.run(["git", "config", "user.email"], cwd=where, capture_output=True, text=True)
+        return out.stdout.strip()
+
+    assert email(home / "w/project") == "me@work.io"
+    assert email(home / "personal/project") == ""  # outside the work folder: the global identity (none here)
+
+    Runner(P, say=lambda _: None).uninstall(c, ["git-identities"])
+    assert not (home / ".gitconfig-work").exists()  # rigsmith created it, and nothing else is in it
+    assert "includeIf" not in (home / ".gitconfig").read_text()
+
+
+def test_git_identities_without_email_only_sets_the_folder_rule(home):
+    from rigsmith.model import ARTIFACTS
+    from rigsmith.runner import effects_for
+
+    effs = effects_for(ARTIFACTS["git-identities"], P, {"work-dir": "~/w/", "work-email": ""})
+    assert [e.label for e in effs] == ["git config --global includeIf.gitdir:~/w/.path"]

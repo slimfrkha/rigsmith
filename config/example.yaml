@@ -83,6 +83,7 @@ sections:
       gh: minimal
       git-aliases: minimal
       git-defaults: minimal
+      git-identities: minimal
     ui:
       lazygit: minimal
       gitlens-ext: standard
@@ -216,3 +217,4 @@ answers:
   tui: "yes"
   fun: "yes"
   theme: catppuccin
+  work-dir: ~/Desktop/projects/work/

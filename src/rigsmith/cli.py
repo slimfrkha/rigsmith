@@ -116,7 +116,7 @@ def scan(
             console.print(f"[bold magenta]{e.section}[/] [magenta]/ {e.subsection}[/]")
             last = (e.section, e.subsection)
         art = cfg.library[e.id]
-        st = status(art, p)
+        st = status(art, p, state.answers)
         counts[st] = counts.get(st, 0) + 1
         src = art.source(p)
         owner = "managed" if state.managed(e.id) else "pre-existing" if st in ("installed", "partial") else ""
@@ -151,7 +151,7 @@ def plan_report(cfg: Config, plan: Plan, p: Platform) -> list[str]:
     lines = ["[bold]Answers:[/] " + ", ".join(f"{k}={v}" for k, v in plan.answers.items())]
     todo, done, irreversible, labels = [], [], [], {}
     for i in plan.order:
-        effs = pending(cfg.library[i], p, state)
+        effs = pending(cfg.library[i], p, state, plan.answers)
         (todo if effs else done).append(i)
         labels[i] = ", ".join(e.label for e in effs)
         irreversible += [f"{i}: {e.label}" for e in effs if not e.reversible]
@@ -209,7 +209,7 @@ def install(
     p = _platform(unsupported)
     base = None
     if yes or dry_run:
-        plan = build(cfg, p, ids=ids or [], profile=profile, sections=section or [])
+        plan = build(cfg, p, ids=ids or [], profile=profile, sections=section or [], remembered=State().answers)
     else:
         from rigsmith.tui import interactive_install  # noqa: PLC0415  (Textual loads lazily)
 

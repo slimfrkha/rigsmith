@@ -87,6 +87,7 @@ sections:
       gh: standard
       git-aliases: minimal
       git-defaults: minimal
+      git-identities: standard
     ui:
       lazygit: standard
       gitlens-ext: standard

@@ -270,7 +270,14 @@ icons = Question(
 - `exclude_tags` drops tagged artifacts from the pre-ticked selection.
 - Config can disable questions: `questions: {skip: [...]}`.
 
-Built-in questions (initial): icons, replace classic commands (aliases), full-screen TUIs, fun stuff, color theme.
+Built-in questions: icons, replace classic commands (aliases), full-screen TUIs, fun stuff, color theme, and two
+**text** questions (`kind="text"`, answered in an input field) for `git-identities`: work folder and work email.
+
+- Artifacts use answers through `{{question-id}}` placeholders in git settings (keys and values). A setting that
+  still contains a placeholder or comes out empty is skipped (e.g. no work email yet).
+- Answers are remembered in state: they're the defaults next time, and `scan`/`uninstall` use them to rebuild the
+  exact keys. Precedence: explicit answer → config `answers:` → remembered → question default.
+- Questions referenced only by artifacts ticked in the picker are asked right after it.
 
 ---
 

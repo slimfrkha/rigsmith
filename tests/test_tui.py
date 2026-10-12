@@ -86,3 +86,42 @@ def test_first_run_picks_a_preset_or_a_file(home):
     assert name == str(mine) and cfg.ids == ["ripgrep"]
 
     assert drive(job, ["down", "enter", *"/nope.yaml", "enter", "escape", "escape"]) is None  # bad path → asked again
+
+
+GIT_ONLY = """
+profiles: [minimal, standard]
+sections:
+  cli:
+    search: {ripgrep: minimal}
+  git:
+    core: {git-identities: standard}
+"""
+
+
+def test_text_questions_are_asked_with_their_defaults(home):
+    from rigsmith import config
+
+    cfg = config.parse(config.yaml().load(GIT_ONLY))
+
+    async def job(app):
+        return await questionnaire(app, cfg, P, [], "standard", [])
+
+    keys = ["enter", "ctrl+u", *"~/code/work", "enter", *"me@x.io", "enter"]  # sections, work-dir, email
+    answers, _ = drive(job, keys)
+    assert answers["work-dir"] == "~/code/work" and answers["work-email"] == "me@x.io"
+
+
+def test_questions_for_artifacts_ticked_in_the_picker_are_asked_after_it(home):
+    from rigsmith import config
+    from rigsmith.tui import install_flow
+
+    cfg = config.parse(config.yaml().load(GIT_ONLY))
+
+    async def job(app):
+        return await install_flow(app, cfg, P, [], None, [])
+
+    # minimal → only ripgrep is ticked and nothing asks about git; then git-identities is ticked in the picker
+    tree = ["down"] * 5 + ["space", "enter"]  # cli, search, ripgrep, git, core, git-identities
+    plan, menu, base = drive(job, ["enter", "enter", *tree, "enter", *"me@x.io", "enter", "y"])
+    assert "git-identities" in plan.order and base is None
+    assert plan.answers["work-dir"] == "~/work/" and plan.answers["work-email"] == "me@x.io"

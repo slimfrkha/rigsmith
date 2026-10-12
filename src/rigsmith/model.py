@@ -7,6 +7,7 @@ import re
 import shutil
 import subprocess
 import sys
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, ClassVar, TextIO
@@ -201,6 +202,7 @@ class VSCodeSetting:
 class GitConfig:
     key: str
     value: str
+    file: str | None = None  # another git config file (e.g. ~/.gitconfig-work); default: global
 
 
 type Setting = VSCodeSetting | GitConfig
@@ -285,12 +287,14 @@ class Question:
 
     id: str
     text: str
-    choices: dict[str, dict[str, Any]]  # answer -> {"env": {...}, "exclude_tags": [...]}
-    default: str
+    choices: dict[str, dict[str, Any]] = field(default_factory=dict)  # answer -> {"env": …, "exclude_tags": …}
+    default: str = ""
     help: str = ""
+    kind: str = "choice"  # choice | text (free text, e.g. a folder or an email)
+    normalize: Callable[[str], str] | None = None  # text answers: clean up what the user typed
 
     def __post_init__(self) -> None:
-        if self.default not in self.choices:
+        if self.kind == "choice" and self.default not in self.choices:
             raise ValueError(f"question {self.id}: default {self.default!r} is not a choice")
         if self.id in QUESTIONS:
             raise ValueError(f"duplicate question id {self.id!r}")
@@ -304,10 +308,19 @@ class Question:
         return self.id in art.prefs or bool(self.tags & set(art.tags))
 
     def excluded_tags(self, answer: str) -> set[str]:
-        return set(self.choices[answer].get("exclude_tags", []))
+        return set(self.choices.get(answer, {}).get("exclude_tags", []))
 
     def env(self, answer: str) -> dict[str, str]:
-        return dict(self.choices[answer].get("env", {}))
+        return dict(self.choices.get(answer, {}).get("env", {}))
+
+    def clean(self, answer: str) -> str:
+        answer = answer.strip()
+        return self.normalize(answer) if self.normalize and answer else answer
+
+
+def render(text: str, answers: dict[str, str]) -> str:
+    """Fill `{{question-id}}` placeholders with answers (unknown ones are left as they are)."""
+    return re.sub(r"\{\{([\w-]+)\}\}", lambda m: answers.get(m[1], m[0]), text)
 
 
 # ── Paths ────────────────────────────────────────────────────────────────────

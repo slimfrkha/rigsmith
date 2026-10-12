@@ -8,7 +8,7 @@ from pathlib import Path
 from typing import Any
 
 from rigsmith.effects import Effect
-from rigsmith.model import Artifact, GitConfig, Platform, VSCodeSetting, run
+from rigsmith.model import Artifact, GitConfig, Platform, VSCodeSetting, render, run
 
 
 def vscode_settings_path(p: Platform) -> Path:
@@ -84,35 +84,51 @@ class VSCodeSettingEffect(Effect):
 
 
 class GitConfigEffect(Effect):
-    def __init__(self, artifact: str, key: str, value: str) -> None:
-        self.artifact, self.gkey, self.value = artifact, key, value
-        self.key, self.label = f"git:{key}", f"git config --global {key}"
+    """One key in the global git config, or in another git config file (`file`)."""
+
+    def __init__(self, artifact: str, key: str, value: str, file: str | None = None) -> None:
+        self.artifact, self.gkey, self.value, self.file = artifact, key, value, file
+        self.key = f"git:{file}:{key}" if file else f"git:{key}"
+        self.where = ["--file", str(Path(file).expanduser())] if file else ["--global"]
+        self.label = f"git config {' '.join(self.where)} {key}"
 
     def current(self) -> str | None:
-        r = run(["git", "config", "--global", "--get", self.gkey], check=False)
+        r = run(["git", "config", *self.where, "--get", self.gkey], check=False)
         return r.stdout.strip() if r.returncode == 0 else None
 
     def desired(self) -> str:
         return self.value
 
     def backup(self) -> Any:
-        return self.current()
+        existed = Path(self.file).expanduser().exists() if self.file else True
+        return {"value": self.current(), "existed": existed, "key": self.gkey, "file": self.file}
 
     def apply(self) -> None:
-        run(["git", "config", "--global", self.gkey, self.value])
+        run(["git", "config", *self.where, self.gkey, self.value])
 
     def restore(self, backup: Any) -> None:
-        if backup is None:
-            run(["git", "config", "--global", "--unset", self.gkey], check=False)
+        if isinstance(backup, dict):  # older receipts stored the bare previous value
+            value, existed = backup.get("value"), backup.get("existed", True)
         else:
-            run(["git", "config", "--global", self.gkey, backup])
+            value, existed = backup, True
+        if value is None:
+            run(["git", "config", *self.where, "--unset", self.gkey], check=False)
+        else:
+            run(["git", "config", *self.where, self.gkey, value])
+        path = Path(self.file).expanduser() if self.file else None
+        if path and not existed and path.exists() and not run(["git", "config", *self.where, "--list"]).stdout.strip():
+            path.unlink()  # we created the file and it holds no settings anymore: remove it
 
 
-def setting_effects(art: Artifact, p: Platform) -> list[Effect]:
+def setting_effects(art: Artifact, p: Platform, answers: dict[str, str] | None = None) -> list[Effect]:
+    """Settings with `{{answer}}` placeholders filled in. A git setting whose value comes out empty is skipped."""
     effs: list[Effect] = []
+    answers = answers or {}
     for s in art.settings:
         if isinstance(s, VSCodeSetting):
             effs.append(VSCodeSettingEffect(art.id, vscode_settings_path(p), s.key, s.value))
         elif isinstance(s, GitConfig):
-            effs.append(GitConfigEffect(art.id, s.key, s.value))
+            key, value = render(s.key, answers), render(s.value, answers)
+            if value and "{{" not in key + value:  # unanswered → nothing to set yet
+                effs.append(GitConfigEffect(art.id, key, value, s.file))
     return effs

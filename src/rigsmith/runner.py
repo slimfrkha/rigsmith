@@ -21,14 +21,14 @@ from rigsmith.effects import (
     PostInstallEffect,
     snippet_effects,
 )
-from rigsmith.model import Artifact, Platform, state_home
+from rigsmith.model import QUESTIONS, Artifact, Platform, state_home
 from rigsmith.plan import Plan
-from rigsmith.settings import setting_effects
+from rigsmith.settings import GitConfigEffect, setting_effects
 from rigsmith.shell import CORE, ZshrcBlock, core_effects, has_snippets
 from rigsmith.state import CREATED, IRREVERSIBLE, MODIFIED, NOOP, Receipt, State
 
 
-def effects_for(art: Artifact, p: Platform) -> list[Effect]:
+def effects_for(art: Artifact, p: Platform, answers: dict[str, str] | None = None) -> list[Effect]:
     effs: list[Effect] = []
     if src := art.source(p):
         effs.append(PackageEffect(art, src, p))
@@ -38,25 +38,25 @@ def effects_for(art: Artifact, p: Platform) -> list[Effect]:
         for f in art.files
         if f.os in (None, p.os)
     ]
-    effs += setting_effects(art, p)
+    effs += setting_effects(art, p, answers)
     effs += art.extra_effects(p)
     if art.has_post_install:
         effs.append(PostInstallEffect(art))
     return effs
 
 
-def status(art: Artifact, p: Platform) -> str:
+def status(art: Artifact, p: Platform, answers: dict[str, str] | None = None) -> str:
     """installed | partial | missing | n/a — from the real system, not from receipts."""
     if not art.available(p):
         return "n/a"
-    done = [e.current() == e.desired() for e in effects_for(art, p) if e.inspectable]
+    done = [e.current() == e.desired() for e in effects_for(art, p, answers) if e.inspectable]
     return "installed" if all(done) else "partial" if any(done) else "missing"
 
 
-def pending(art: Artifact, p: Platform, state: State) -> list[Effect]:
+def pending(art: Artifact, p: Platform, state: State, answers: dict[str, str] | None = None) -> list[Effect]:
     """Effects an install would apply (ignores effects the user changed since install)."""
     out = []
-    for e in effects_for(art, p):
+    for e in effects_for(art, p, state.answers if answers is None else answers):
         r = state.get(e.key)
         if not e.inspectable:
             if not r:
@@ -88,7 +88,8 @@ class Runner:
     def install(self, cfg: Config, plan: Plan) -> Result:
         res, order = Result(), plan.order
         self.state.requested |= {i for i, why in plan.reasons.items() if why == "selected"}
-        todo = {i: pending(cfg.library[i], self.p, self.state) for i in order}
+        todo = {i: pending(cfg.library[i], self.p, self.state, plan.answers) for i in order}
+        self.state.answers.update({k: v for k, v in plan.answers.items() if k in QUESTIONS})
         # packages missing when the run starts: if one appears before its turn, this run brought it in
         self._absent_at_start = {e.key for effs in todo.values() for e in effs if isinstance(e, PackageEffect)}
         with self._log("install"):
@@ -104,7 +105,7 @@ class Runner:
                 if todo[i]:
                     self.say(f"[{n}/{len(order)}] … {i}: {', '.join(e.label for e in todo[i])}")
                 try:
-                    changed = sum(self._apply(e, res) for e in effects_for(art, self.p))
+                    changed = sum(self._apply(e, res) for e in effects_for(art, self.p, plan.answers))
                 except Exception as e:  # one artifact failing must not stop the run
                     res.failed[i] = str(e)
                     self.say(f"[{n}/{len(order)}] ✗ {i}: {e}")
@@ -154,12 +155,13 @@ class Runner:
     def uninstall(self, cfg: Config, order: list[str], include_unmanaged: bool = False) -> Result:
         res = Result()
         with self._log("uninstall"):
-            effs_all = [e for i in order if i in cfg.library for e in effects_for(cfg.library[i], self.p)]
+            answers = self.state.answers
+            effs_all = [e for i in order if i in cfg.library for e in effects_for(cfg.library[i], self.p, answers)]
             if any(e.sudo and (r := self.state.get(e.key)) and r.op != NOOP for e in effs_all):
                 sudo_upfront(self.say)
             for n, i in enumerate(order, 1):
                 art = cfg.library.get(i)
-                effs = {e.key: e for e in effects_for(art, self.p)} if art else {}
+                effs = {e.key: e for e in effects_for(art, self.p, self.state.answers)} if art else {}
                 try:
                     changed = self._undo_artifact(i, effs, include_unmanaged, res)
                 except Exception as e:
@@ -230,6 +232,8 @@ def generic_effect(r: Receipt) -> Effect | None:
         return ZshrcBlock()
     if r.key == "login-shell":
         return LoginShellEffect(r.artifact)
+    if r.key.startswith("git:") and isinstance(r.backup, dict) and "key" in r.backup:
+        return GitConfigEffect(r.artifact, r.backup["key"], "", r.backup.get("file"))
     return None
 
 

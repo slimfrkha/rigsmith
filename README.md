@@ -49,6 +49,7 @@ shell, CLI, git, Python, Go, Rust, Java, JS, containers, Kubernetes, cloud, IaC,
 - [How it's organized](#how-its-organized)
 - [Safe by design](#safe-by-design)
 - [Configs](#configs)
+- [Per-project setups](#per-project-setups)
 - [Add your own tools](#add-your-own-tools)
 - [Platforms](#platforms)
 - [Development](#development)
@@ -146,6 +147,46 @@ A config fully replaces the reference. When the library gains artifacts your con
 curl -fsSL https://raw.githubusercontent.com/slimfrkha/rigsmith/v0.1.0/install.sh \
   | RIGSMITH_VERSION=0.1.0 sh -s -- install -c my-config.yaml -y
 ```
+
+## Per-project setups
+
+rigsmith installs tools once, for the whole machine. What changes from one project to the next is handled by
+three things in the library that switch **automatically when you `cd`**, so there's nothing to activate or forget:
+
+| You want, per project | Use | Artifact |
+|---|---|---|
+| the right git identity (work vs personal) | git's `includeIf` by folder | `git-identities` |
+| cloud project, cluster, account, secrets | a `.envrc` file | `direnv` |
+| tool versions (node, terraform, python…) | a `mise.toml` file | `mise` |
+
+**git-identities** asks for your work folder and work email. Every repo under that folder commits with the
+work email; everything else keeps your usual one. Extra work-only settings (signing key, SSH key) go in
+`~/.gitconfig-work`.
+
+**direnv** loads a project's `.envrc` when you enter the folder and unloads it when you leave. Run `direnv allow`
+once per new or changed file (a cloned repo can't run code in your shell on its own):
+
+```sh
+# ~/work/client-a/.envrc
+export CLOUDSDK_ACTIVE_CONFIG_NAME=client-a   # gcloud project/account for this client
+export KUBECONFIG=$PWD/.kube/config            # only this client's clusters
+export AWS_PROFILE=client-a
+dotenv .env                                     # secrets from a git-ignored file
+```
+
+**mise** activates the tool versions a project declares, downloading each version once:
+
+```toml
+# ~/work/api/mise.toml
+[tools]
+node = "22"
+terraform = "1.9.5"
+
+[env]
+DATABASE_URL = "postgres://localhost/api"
+```
+
+Rule of thumb: mise for versions and simple variables, direnv when you need shell logic.
 
 ## Add your own tools
 

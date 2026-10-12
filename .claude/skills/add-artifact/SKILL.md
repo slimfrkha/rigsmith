@@ -66,6 +66,13 @@ Illustrations of Laws 1–2: anchors, not a complete list. Reason from the laws 
 - **Inclusion bar**: widely used and maintained. If the user asks for a niche tool, say so in one line and offer a
   `custom:` entry in their own config. If they still want it built in, add it. It's their repo.
 
+## Artifacts that need the user's input
+
+If the artifact needs a value only the user knows (a folder, an email), add a `Question(kind="text", ...)` in
+`library/questions.py`, list its id in the artifact's `prefs`, and use `{{question-id}}` in git setting keys or
+values. A text question is asked only when an artifact in scope references it; an empty answer skips the
+setting. `git-identities` is the worked example.
+
 ## Help text
 
 One or two sentences: what it is, then the one command or key to try. `"Fast, disk-efficient Node package

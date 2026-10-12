@@ -15,7 +15,7 @@ from textual.widgets.tree import TreeNode
 
 from rigsmith import config as cfgmod
 from rigsmith.config import Available, Config, ConfigError, Entry
-from rigsmith.model import Platform
+from rigsmith.model import QUESTIONS, Platform, Question
 from rigsmith.plan import Plan, build, questions_for, roles_for, select
 from rigsmith.runner import status
 from rigsmith.state import State
@@ -34,6 +34,7 @@ class Step:
     default: str | list[str]
     help: str = ""
     multi: bool = False
+    free: bool = False  # free text (Input) instead of a list
 
 
 class ChoiceScreen(Screen[Any]):
@@ -78,6 +79,45 @@ class ChoiceScreen(Screen[Any]):
 
 class MultiChoiceScreen(ChoiceScreen):
     BINDINGS = [Binding("enter", "submit", "Next", priority=True)]
+
+
+class TextScreen(Screen[str | None]):
+    """A free-text question, prefilled with its default. Empty is a valid answer."""
+
+    BINDINGS = [Binding("escape", "back", "Back")]
+
+    def __init__(self, step: Step, n: int, total: int) -> None:
+        super().__init__()
+        self.step, self.n, self.total = step, n, total
+
+    def compose(self) -> ComposeResult:
+        s = self.step
+        yield Header()
+        yield Static(f"[dim]Question {self.n}/{self.total}[/]\n[bold]{s.title}[/]\n[dim]{s.help}[/]", classes="title")
+        yield Input(value=str(s.default), id="answer")
+        yield Static("[dim]enter next · esc back[/]", classes="hint")
+        yield Footer()
+
+    def on_mount(self) -> None:
+        self.query_one(Input).focus()
+
+    def on_input_submitted(self, event: Input.Submitted) -> None:
+        self.dismiss(event.value)
+
+    def action_back(self) -> None:
+        self.dismiss(None)
+
+
+def screen_for(step: Step, n: int, total: int) -> Screen[Any]:
+    if step.free:
+        return TextScreen(step, n, total)
+    return (MultiChoiceScreen if step.multi else ChoiceScreen)(step, n, total)
+
+
+def question_step(q: Question, answers: dict[str, str]) -> Step:
+    if q.kind == "text":
+        return Step(q.id, q.text, [], answers.get(q.id, q.default), q.help, free=True)
+    return Step(q.id, q.text, [(c, c) for c in q.choices], answers.get(q.id, q.default), q.help)
 
 
 def install_steps(
@@ -126,8 +166,7 @@ def install_steps(
             for c in cands
         ]
         steps.append(Step(role, f"Pick your {role}", options, default, "Only one can be active at a time."))
-    for q in questions_for(cfg, scope):
-        steps.append(Step(q.id, q.text, [(c, c) for c in q.choices], answers.get(q.id, q.default), q.help))
+    steps += [question_step(q, answers) for q in questions_for(cfg, scope)]
     return steps
 
 
@@ -407,15 +446,19 @@ class Flow(App[Any]):
         self.exit(await self.job(self))
 
 
+def remembered_answers(cfg: Config) -> dict[str, str]:
+    """Last run's question answers as defaults, overridden by what the config pins."""
+    return {**{k: v for k, v in State().answers.items() if k in QUESTIONS}, **cfg.answers}
+
+
 async def questionnaire(app: App[Any], cfg: Config, p: Platform, ids, profile, sections) -> tuple | None:
-    answers, chosen, i = dict(cfg.answers), list(sections), 0
+    answers, chosen, i = remembered_answers(cfg), list(sections), 0
     while True:
         steps = install_steps(cfg, p, ids, profile, sections, answers, chosen)
         if i >= len(steps):
             return answers, chosen
         step = steps[i]
-        screen = (MultiChoiceScreen if step.multi else ChoiceScreen)(step, i + 1, len(steps))
-        res = await app.push_screen_wait(screen)
+        res = await app.push_screen_wait(screen_for(step, i + 1, len(steps)))
         if res is None:
             if i == 0:
                 return None
@@ -504,38 +547,48 @@ def pick_config(bases: list[Available]) -> str | None:
     return Flow(job).run()
 
 
-def interactive_install(
-    cfg: Config, p: Platform, *, ids, profile, sections, bases: list[Available] | None = None
+async def install_flow(
+    app: App[Any], cfg: Config, p: Platform, ids, profile, sections, bases: list[Available] | None = None
 ) -> tuple[Plan, Config, str | None] | None:
     """Questionnaire → picker → confirm. With `bases` (first run, no config yet) it starts by picking a menu."""
     from rigsmith.cli import plan_report  # noqa: PLC0415  (cli imports this module lazily)
 
-    async def job(app: App[Any]) -> tuple[Plan, Config, str | None] | None:
-        menu, base = cfg, None
-        if bases:
-            picked = await choose_base(app, bases)
-            if picked is None:
-                return None
-            base, menu = picked
-        q = await questionnaire(app, menu, p, ids, profile, sections)
-        if q is None:
+    menu, base = cfg, None
+    if bases:
+        picked = await choose_base(app, bases)
+        if picked is None:
             return None
-        answers, chosen = q
-        prof = profile or answers.get("profile")
-        start = build(menu, p, ids=ids, profile=prof, sections=chosen or sections, answers=answers)
-        ticked = {i for i in start.order if menu.entry(i)}
-        while True:
-            picked_ids = await app.push_screen_wait(PickerScreen(menu, p, menu.entries, ticked))
-            if picked_ids is None:
-                return None
-            plan = build(menu, p, answers=answers, picked=picked_ids)
-            plan.replace = replacements(menu, p, picked_ids)
-            choice = await app.push_screen_wait(ConfirmScreen(plan_report(menu, plan, p)))
-            if choice == "go":
-                return plan, menu, base
-            if choice is None:
-                return None
-            ticked = set(picked_ids)
+        base, menu = picked
+    q = await questionnaire(app, menu, p, ids, profile, sections)
+    if q is None:
+        return None
+    answers, chosen = q
+    prof = profile or answers.get("profile")
+    start = build(menu, p, ids=ids, profile=prof, sections=chosen or sections, answers=answers)
+    ticked = {i for i in start.order if menu.entry(i)}
+    while True:
+        picked_ids = await app.push_screen_wait(PickerScreen(menu, p, menu.entries, ticked))
+        if picked_ids is None:
+            return None
+        missing = [q for q in questions_for(menu, picked_ids) if q.id not in answers]
+        for n, q in enumerate(missing, 1):  # ticked in the picker, so not asked earlier
+            res = await app.push_screen_wait(screen_for(question_step(q, answers), n, len(missing)))
+            answers[q.id] = q.default if res is None else res
+        plan = build(menu, p, answers=answers, picked=picked_ids)
+        plan.replace = replacements(menu, p, picked_ids)
+        choice = await app.push_screen_wait(ConfirmScreen(plan_report(menu, plan, p)))
+        if choice == "go":
+            return plan, menu, base
+        if choice is None:
+            return None
+        ticked = set(picked_ids)
+
+
+def interactive_install(
+    cfg: Config, p: Platform, *, ids, profile, sections, bases: list[Available] | None = None
+) -> tuple[Plan, Config, str | None] | None:
+    async def job(app: App[Any]) -> tuple[Plan, Config, str | None] | None:
+        return await install_flow(app, cfg, p, ids, profile, sections, bases)
 
     return Flow(job).run()
 

@@ -83,6 +83,7 @@ def build(
     sections: list[str] | tuple[str, ...] = (),
     answers: dict[str, str] | None = None,
     picked: list[str] | None = None,
+    remembered: dict[str, str] | None = None,
 ) -> Plan:
     """Resolve a selection into an ordered plan. `picked` (the picker's result) replaces the filters."""
     answers = {**cfg.answers, **(answers or {})}
@@ -94,8 +95,11 @@ def build(
 
     # questions: env prefs + excluded tags (only when the picker didn't already decide)
     excluded: set[str] = set()
-    for q in questions_for(cfg, chosen):
-        a = answers.setdefault(q.id, q.default)
+    for q in questions_for(cfg, chosen):  # explicit/config answer, else last run's, else the default
+        a = q.clean(answers.get(q.id) or (remembered or {}).get(q.id) or q.default)
+        if q.kind == "choice" and a not in q.choices:
+            a = q.default
+        answers[q.id] = a
         excluded |= q.excluded_tags(a)
         plan.env.update(q.env(a))
     if picked is None:

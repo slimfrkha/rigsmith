@@ -30,6 +30,21 @@ Artifact(
     ],
     requires=["git"],
 )
+Artifact(
+    id="git-identities",
+    help="Work identity in work repos, your own everywhere else: git switches by folder (includeIf), "
+    "nothing to remember.",
+    settings=[
+        GitConfig("includeIf.gitdir:{{work-dir}}.path", "~/.gitconfig-work"),
+        GitConfig("user.email", "{{work-email}}", file="~/.gitconfig-work"),
+    ],
+    prefs=["work-dir", "work-email"],
+    requires=["git"],
+    notes=[
+        "Clone work repos under your work folder; inside one, `git config user.email` shows the work email.",
+        "Add more work-only settings (signing key, sshCommand) to ~/.gitconfig-work.",
+    ],
+)
 tool(
     "delta",
     "Beautiful git diffs: syntax highlighting, side-by-side, line numbers. Becomes git's pager.",

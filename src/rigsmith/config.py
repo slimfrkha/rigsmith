@@ -172,7 +172,7 @@ def validate_answers(cfg: Config) -> list[str]:
             if value not in cfg.profiles:
                 errors.append(f"answers.profile: unknown profile {value!r}")
         elif key in QUESTIONS:
-            if value not in QUESTIONS[key].choices:
+            if QUESTIONS[key].kind == "choice" and value not in QUESTIONS[key].choices:
                 errors.append(f"answers.{key}: {value!r} is not one of {list(QUESTIONS[key].choices)}")
         elif key in roles:
             art = cfg.library.get(value)
