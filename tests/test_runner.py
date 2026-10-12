@@ -394,3 +394,32 @@ def test_no_swap_no_replacement(cfg):
 
     install(cfg, ids=["p1"])
     assert replacements(cfg, P, State(), ["p1"], ["p1"]) is None
+
+
+def test_a_remembered_role_pick_is_the_default_when_no_provider_is_installed(cfg):
+    plan = build(cfg, P, remembered={"prompt": "p2"})
+    assert "p2" in plan.order and "p1" not in plan.order
+    INSTALLED.add("p1")  # an installed provider still wins, and says so
+    plan = build(cfg, P, remembered={"prompt": "p2"})
+    assert "p1" in plan.order and "p2" not in plan.order
+    assert plan.warnings == ["prompt: keeping installed p1 (answer was p2)"]
+
+
+def test_uninstalling_the_picked_provider_forgets_the_pick(cfg):
+    from rigsmith.state import State
+
+    install(cfg, ids=["p2"], answers={"prompt": "p2"})
+    assert State().answers["prompt"] == "p2"
+    uninstall(cfg, ["p2"])
+    assert "prompt" not in State().answers  # removed on purpose: don't bring it back
+    assert "p1" in build(cfg, P, remembered=State().answers).order
+
+
+def test_the_plan_screen_shows_only_the_answers_this_run_uses(cfg):
+    from rigsmith.cli import plan_report
+
+    plan = build(cfg, P, ids=["alpha"], remembered={"work-email": "me@x.io", "prompt": "p2"})
+    assert plan_report(cfg, plan, P)[0] == "[bold]Answers:[/] "  # neither git-identities nor a prompt is planned
+    plan = build(cfg, P, remembered={"work-email": "me@x.io"})  # the whole profile: p1 and p2 compete
+    shown = plan_report(cfg, plan, P)[0]
+    assert "profile=minimal" in shown and "prompt=p1" in shown and "work-email" not in shown

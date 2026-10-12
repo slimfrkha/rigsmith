@@ -12,11 +12,21 @@ import typer
 from rich.console import Console
 from rich.text import Text
 
+from rigsmith import answers as answersmod
 from rigsmith import config as cfgmod
 from rigsmith import library  # noqa: F401  (registers built-in artifacts)
 from rigsmith.config import Config, ConfigError, Entry
 from rigsmith.model import Platform, ensure_path
-from rigsmith.plan import Plan, active_providers, build, inactive_providers, plan_removal, removal_candidates, select
+from rigsmith.plan import (
+    Plan,
+    active_providers,
+    build,
+    inactive_providers,
+    plan_removal,
+    questions_for,
+    removal_candidates,
+    select,
+)
 from rigsmith.runner import Result, Runner, pending, status
 from rigsmith.script import install_script, uninstall_script
 from rigsmith.shell import conflicts
@@ -127,7 +137,7 @@ def scan(
         entries = [e for e in entries if active.entry(e.id) is None]
     p, state = Platform.detect(), State()
     header(active)
-    roles_active = active_providers(cfg, p, {**state.answers, **active.answers})
+    roles_active = active_providers(cfg, p, answersmod.resolve(active, state.answers))
 
     counts: dict[str, int] = {}
     last: tuple[str, str] | None = None
@@ -157,7 +167,7 @@ def scan(
         missing = [id for id in library_config(active).ids if active.entry(id) is None]
         if missing:
             console.print(f"[cyan]ℹ {len(missing)} library artifacts are not in your config — `scan --all --new`[/]")
-    inactive, ambiguous = inactive_providers(cfg, p, {**state.answers, **active.answers})
+    inactive, ambiguous = inactive_providers(cfg, p, answersmod.resolve(active, state.answers))
     for i, role, winner in inactive:
         console.print(
             f"[yellow]⚠ {i} is installed but inactive ({role} → {winner}) — `rigsmith uninstall --inactive`[/]"
@@ -178,7 +188,8 @@ def scan(
 def plan_report(cfg: Config, plan: Plan, p: Platform) -> list[str]:
     """The diff screen as markup lines: answers, already in place, to install, caveats."""
     state = State()
-    lines = ["[bold]Answers:[/] " + ", ".join(f"{k}={v}" for k, v in plan.answers.items())]
+    used = {"profile"} | {cfg.library[i].role for i in plan.order} | {q.id for q in questions_for(cfg, plan.order)}
+    lines = ["[bold]Answers:[/] " + ", ".join(f"{k}={v}" for k, v in plan.answers.items() if k in used)]
     todo, done, irreversible, labels = [], [], [], {}
     for i in plan.order:
         effs = pending(cfg.library[i], p, state, plan.answers)

@@ -6,6 +6,7 @@ It's for seeing under the hood. Running it yourself bypasses receipts, so rigsmi
 from datetime import datetime
 from importlib.metadata import PackageNotFoundError, version
 
+from rigsmith import answers as answersmod
 from rigsmith import reconcile
 from rigsmith.config import Config, label
 from rigsmith.effects import shell_d
@@ -68,8 +69,8 @@ def install_script(cfg: Config, plan: Plan, p: Platform, command: str) -> str:
                 lines += e.sh()
         out += _section(f"{i}{why}", lines)
     if any(cfg.library[i].snippets for i in plan.order) or any(shell_d().glob("*.zsh")):
-        answers = {**state.answers, **plan.answers}
-        core = [line for e, d in reconcile.shell_integration(answers, state) if d.changes for line in e.sh()]
+        answersmod.remember(state, plan.answers)  # as a real run would, before writing prefs (never saved here)
+        core = [line for e, d in reconcile.shell_integration(state.answers, state) if d.changes for line in e.sh()]
         if core:
             out += _section("shell integration: preferences, init.zsh, the ~/.zshrc block", core)
     if done:

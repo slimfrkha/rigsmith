@@ -127,3 +127,16 @@ def test_questions_for_artifacts_ticked_in_the_picker_are_asked_after_it(home):
     plan, menu, base = drive(job, ["enter", "enter", *tree, "enter", *"me@x.io", "enter", "y"])
     assert "git-identities" in plan.order and base is None
     assert plan.answers["work-dir"] == "~/work/" and plan.answers["work-email"] == "me@x.io"
+
+
+def test_explicit_ids_ignore_the_profile_in_the_questionnaire_as_in_the_plan(home):
+    """`install git-identities` with `profile: minimal` pinned: asked about, and installed (it's in standard)."""
+    from rigsmith import config
+    from rigsmith.plan import build
+    from rigsmith.tui import install_steps
+
+    cfg = config.parse(config.yaml().load(GIT_ONLY))
+    answers = {"profile": "minimal"}
+    steps = install_steps(cfg, P, ["git-identities"], None, [], answers, [])
+    assert "work-dir" in [s.key for s in steps]
+    assert "git-identities" in build(cfg, P, ids=["git-identities"], answers=answers).order

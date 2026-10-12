@@ -12,8 +12,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from rigsmith.answers import prefs_env
 from rigsmith.effects import Effect, FileEffect, LoginShellEffect, PackageEffect
-from rigsmith.model import QUESTIONS
 from rigsmith.settings import GitConfigEffect
 from rigsmith.shell import CORE, ZshrcBlock, core_effects
 from rigsmith.state import CREATED, IRREVERSIBLE, MODIFIED, NOOP, Receipt, State
@@ -81,16 +81,6 @@ def pending(effects: list[Effect], state: State) -> list[Effect]:
 def shell_integration(answers: dict[str, str], state: State) -> Iterator[tuple[Effect, Decision]]:
     """Prefs, init.zsh and the ~/.zshrc block: needed as soon as one rigsmith snippet exists."""
     return install(core_effects(prefs_env(answers)), state)
-
-
-def prefs_env(answers: dict[str, str]) -> dict[str, str]:
-    """Environment for every remembered question answer, not just this run's: installing one artifact must not
-    drop the preferences other installed snippets read (icons, theme)."""
-    env: dict[str, str] = {}
-    for qid, answer in answers.items():
-        if qid in QUESTIONS:
-            env.update(QUESTIONS[qid].env(answer))
-    return env
 
 
 # ── uninstall ────────────────────────────────────────────────────────────────

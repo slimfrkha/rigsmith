@@ -2,6 +2,7 @@
 
 from dataclasses import dataclass, field
 
+from rigsmith import answers as answersmod
 from rigsmith.config import Config, ConfigError, Entry
 from rigsmith.model import QUESTIONS, Artifact, Platform, Question
 from rigsmith.state import NOOP, State
@@ -83,6 +84,17 @@ def resolve_profile(cfg: Config, profile: str | None, ids: list[str] | tuple[str
     return answers.get("profile") or cfg.profiles[0]
 
 
+def installed_providers(cfg: Config, p: Platform, cands: list[str]) -> list[str]:
+    return [i for i in cands if cfg.library[i].sources and cfg.library[i].present(p)]
+
+
+def default_provider(role: str, cands: list[str], installed: list[str], answers: dict[str, str]) -> str:
+    """The installed provider (never replaced implicitly), else the answered one, else the first in config order."""
+    if installed:
+        return installed[0]
+    return answers[role] if answers.get(role) in cands else cands[0]
+
+
 def build(
     cfg: Config,
     p: Platform,
@@ -95,7 +107,7 @@ def build(
     remembered: dict[str, str] | None = None,
 ) -> Plan:
     """Resolve a selection into an ordered plan. `picked` (the picker's result) replaces the filters."""
-    answers = {**cfg.answers, **(answers or {})}
+    answers = answersmod.resolve(cfg, remembered or {}, answers)
     prof = resolve_profile(cfg, profile, ids, answers)
     if prof:
         answers["profile"] = prof
@@ -104,8 +116,8 @@ def build(
 
     # questions: env prefs + excluded tags (only when the picker didn't already decide)
     excluded: set[str] = set()
-    for q in questions_for(cfg, chosen):  # explicit/config answer, else last run's, else the default
-        a = q.clean(answers.get(q.id) or (remembered or {}).get(q.id) or q.default)
+    for q in questions_for(cfg, chosen):  # empty or unanswered: the default
+        a = q.clean(answers.get(q.id) or q.default)
         if q.kind == "choice" and a not in q.choices:
             a = q.default
         answers[q.id] = a
@@ -116,19 +128,15 @@ def build(
 
     # roles: one provider each. An installed provider always wins; never replace it implicitly.
     for role, cands in roles_for(cfg, chosen).items():
-        installed = [i for i in cands if cfg.library[i].sources and cfg.library[i].present(p)]
-        wanted = answers.get(role)
         if picked is not None:
-            keep = [i for i in cands if i in picked]
-            keep = keep[:1]
-        elif installed:
-            keep = installed[:1]
-            if wanted and wanted != keep[0]:
+            keep = [i for i in cands if i in picked][:1]
+        else:
+            installed, wanted = installed_providers(cfg, p, cands), answers.get(role)
+            keep = [default_provider(role, cands, installed, answers)]
+            if installed and wanted and wanted != keep[0]:
                 plan.warnings.append(f"{role}: keeping installed {keep[0]} (answer was {wanted})")
             if len(installed) > 1:
                 plan.warnings.append(f"{role}: several providers installed ({', '.join(installed)}), left alone")
-        else:
-            keep = [wanted if wanted in cands else cands[0]]
         if keep:
             answers[role] = keep[0]
         chosen = [i for i in chosen if i not in cands or i in keep]
@@ -263,7 +271,7 @@ def removal_candidates(
     """
     scope = [e.id for e in select(cfg, ids=ids, profile=profile, sections=sections)]
     if inactive:
-        found, ambiguous = inactive_providers(cfg, p, {**state.answers, **cfg.answers})
+        found, ambiguous = inactive_providers(cfg, p, answersmod.resolve(cfg, state.answers))
         notes = [f"{i}: inactive {role} (active: {winner})" for i, role, winner in found]
         return [i for i, _, _ in found if i in scope], ambiguous, notes
     from rigsmith.runner import status  # noqa: PLC0415  (runner imports plan)

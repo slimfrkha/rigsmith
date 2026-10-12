@@ -127,8 +127,10 @@ without engine changes.
   there's no variant system.
 - **Text answers** (`kind="text"`, e.g. the work folder) fill `{{question-id}}` placeholders in git settings. A
   setting that's still unanswered or empty is skipped rather than written half-filled.
-- **Answers are remembered** in state: they're the next run's defaults, and `scan`/`uninstall` use them to rebuild the
-  exact keys. Precedence: explicit → config `answers:` → remembered → default.
+- **Answers are remembered** in state (question answers and role picks, never the profile): they're the next run's
+  defaults, and `scan`/`uninstall` use them to rebuild the exact keys. One precedence everywhere, in `answers.py`:
+  explicit → config `answers:` → remembered → default. The first source with the key wins, so clearing an answer
+  sticks; an empty answer then means the question's default.
 - **Questions for artifacts ticked in the picker** are asked right after the picker.
 - **The picker** is a tree of section → subsection → artifact with live status. `n/a` rows can't be ticked, and a row
   whose requirement is neither selected nor installed is greyed.
@@ -228,6 +230,7 @@ src/rigsmith/
   model.py        Platform, Artifact, Question, Backend base, registries
   backends.py     one class per package manager
   config.py       load, resolve, validate, fork (init), use (copy, labels)
+  answers.py      one precedence for answers: explicit, config, remembered
   plan.py         filters, questions, roles, dependency closure, order; what uninstall removes (orphans, swaps)
   effects.py      package / file / login-shell / one-time effects
   settings.py     VS Code settings.json and git config effects
