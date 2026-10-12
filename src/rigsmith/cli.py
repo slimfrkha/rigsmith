@@ -16,7 +16,7 @@ from rigsmith import config as cfgmod
 from rigsmith import library  # noqa: F401  (registers built-in artifacts)
 from rigsmith.config import Config, ConfigError, Entry
 from rigsmith.model import Platform, ensure_path
-from rigsmith.plan import Plan, build, dependents, inactive_providers, select, toposort, with_orphans
+from rigsmith.plan import Plan, active_providers, build, dependents, inactive_providers, select, toposort, with_orphans
 from rigsmith.runner import Result, Runner, effects_for, pending, status
 from rigsmith.script import install_script, uninstall_script
 from rigsmith.shell import conflicts
@@ -98,7 +98,13 @@ def header(cfg: Config) -> None:
     console.print(f"[dim]config: {cfgmod.label(cfg.name)}[/]")
 
 
-ICON = {"installed": "[green]✓[/]", "partial": "[yellow]◐[/]", "missing": "[red]✗[/]", "n/a": "[dim]–[/]"}
+ICON = {
+    "installed": "[green]✓[/]",
+    "partial": "[yellow]◐[/]",
+    "missing": "[red]✗[/]",
+    "inactive": "[dim]○[/]",  # a role alternative that isn't the active one, and isn't installed: as intended
+    "n/a": "[dim]–[/]",
+}
 
 
 # ── scan ─────────────────────────────────────────────────────────────────────
@@ -121,6 +127,7 @@ def scan(
         entries = [e for e in entries if active.entry(e.id) is None]
     p, state = Platform.detect(), State()
     header(active)
+    roles_active = active_providers(cfg, p, {**state.answers, **active.answers})
 
     counts: dict[str, int] = {}
     last: tuple[str, str] | None = None
@@ -131,6 +138,8 @@ def scan(
             last = (e.section, e.subsection)
         art = cfg.library[e.id]
         st = status(art, p, state.answers)
+        if st == "missing" and art.role in roles_active and roles_active[art.role] != e.id:
+            st = "inactive"
         counts[st] = counts.get(st, 0) + 1
         src = art.source(p)
         owner = "managed" if state.managed(e.id) else "pre-existing" if st in ("installed", "partial") else ""

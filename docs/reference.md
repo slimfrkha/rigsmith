@@ -42,7 +42,8 @@ by asking which menu to start from, and offers to save that choice as your confi
 
 ### `rigsmith scan [IDS]...`
 
-What's installed (`✓`), partially configured (`◐`), missing (`✗`) or unavailable on this platform (`–`), by section,
+What's installed (`✓`), partially configured (`◐`), missing (`✗`), an inactive [role](#roles) alternative (`○`, not
+installed on purpose) or unavailable on this platform (`–`), by section,
 and whether rigsmith installed it (`managed`) or it was already there (`pre-existing`).
 
 | Option | Description |

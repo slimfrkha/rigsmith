@@ -320,3 +320,12 @@ def test_installing_one_artifact_keeps_everyone_elses_preferences(cfg, home):
     assert "RIGSMITH_ICONS=1" in prefs.read_text()
     install(cfg, ids=["alpha"])  # no question in this run
     assert "RIGSMITH_ICONS=1" in prefs.read_text()
+
+
+def test_active_provider_is_the_pin_else_the_only_one_installed(cfg):
+    from rigsmith.plan import active_providers
+
+    assert active_providers(cfg, P, {"prompt": "p2"}) == {"prompt": "p2"}
+    assert active_providers(cfg, P, {}) == {}  # nothing pinned, nothing installed: unknown
+    INSTALLED.add("p1")
+    assert active_providers(cfg, P, {}) == {"prompt": "p1"}

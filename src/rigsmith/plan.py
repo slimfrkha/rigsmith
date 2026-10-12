@@ -198,6 +198,19 @@ def with_orphans(lib: dict[str, Artifact], targets: list[str], managed: list[str
     return out
 
 
+def active_providers(cfg: Config, p: Platform, answers: dict[str, str]) -> dict[str, str]:
+    """role → its active provider: the one pinned in answers, else the only one installed."""
+    active = {}
+    for role, members in roles_for(cfg, cfg.ids).items():
+        if answers.get(role) in members:
+            active[role] = answers[role]
+            continue
+        installed = [m for m in members if cfg.library[m].sources and cfg.library[m].present(p)]
+        if len(installed) == 1:
+            active[role] = installed[0]
+    return active
+
+
 def inactive_providers(
     cfg: Config, p: Platform, answers: dict[str, str]
 ) -> tuple[list[tuple[str, str, str]], list[str]]:
