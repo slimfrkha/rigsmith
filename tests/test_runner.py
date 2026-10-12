@@ -329,3 +329,68 @@ def test_active_provider_is_the_pin_else_the_only_one_installed(cfg):
     assert active_providers(cfg, P, {}) == {}  # nothing pinned, nothing installed: unknown
     INSTALLED.add("p1")
     assert active_providers(cfg, P, {}) == {"prompt": "p1"}
+
+
+# ── uninstall planning ──────────────────────────────────────────────────────
+
+
+def test_removal_candidates_are_managed_then_present_then_inactive_synonyms(cfg):
+    from rigsmith.plan import removal_candidates
+    from rigsmith.state import State
+
+    install(cfg, ids=["beta"])  # alpha comes along
+    INSTALLED.add("gamma")  # installed outside rigsmith
+    assert removal_candidates(cfg, P, State())[0] == ["alpha", "beta"]
+    assert removal_candidates(cfg, P, State(), include_unmanaged=True)[0] == ["alpha", "beta", "gamma"]
+    INSTALLED.update({"p1", "p2"})
+    cands, warnings, _ = removal_candidates(cfg, P, State(), inactive=True)
+    assert cands == [] and "p1, p2 are all installed" in warnings[0]  # no pin: don't guess
+    cfg.answers["prompt"] = "p1"
+    assert removal_candidates(cfg, P, State(), inactive=True) == (["p2"], [], ["p2: inactive prompt (active: p1)"])
+
+
+def test_plan_removal_orders_dependents_first_and_says_what_it_leaves(cfg):
+    from rigsmith.plan import plan_removal
+    from rigsmith.state import State
+
+    install(cfg, ids=["beta"])
+    assert plan_removal(cfg, P, State(), ["beta"]).order == ["beta", "alpha"]  # the orphan goes too, after
+    install(cfg, ids=["alpha"])  # asked for by name: no longer an orphan
+    rm = plan_removal(cfg, P, State(), ["alpha"])
+    assert rm.order == ["alpha"] and rm.warnings == ["alpha is needed by: beta (they stay installed)"]
+    INSTALLED.add("gamma")
+    install(cfg, ids=["gamma"])  # there before rigsmith: a noop receipt
+    assert plan_removal(cfg, P, State(), ["gamma"]).kept == ["gamma"]
+    assert plan_removal(cfg, P, State(), ["gamma"], include_unmanaged=True).kept == []
+
+
+SWAPS = [  # (case, the new provider requires, picked, removed after install)
+    ("only the old one needed it", [], ["p2"], ["p1", "alpha"]),
+    ("the new one needs it too", ["alpha"], ["p2"], ["p1"]),
+    ("picked by name alongside", [], ["p2", "alpha"], ["p1"]),
+]
+
+
+@pytest.mark.parametrize("case, requires, picked, removed", SWAPS, ids=[s[0] for s in SWAPS])
+def test_swapping_a_provider_also_removes_what_only_it_needed(cfg, case, requires, picked, removed):
+    """colima → orbstack must not leave colima's docker-cli behind, unless something being installed wants it."""
+    from rigsmith.plan import replacements
+    from rigsmith.state import State
+
+    cfg.library["p1"].requires = ["alpha"]
+    install(cfg, ids=["p1"])
+    cfg.library["p2"].requires = requires
+    plan = build(cfg, P, picked=picked)
+    rm = replacements(cfg, P, State(), picked, plan.order)
+    assert rm is not None and rm.order == removed
+    Runner(P, say=lambda _: None).install(cfg, plan)
+    Runner(P, say=lambda _: None).uninstall(cfg, rm.order)
+    assert INSTALLED == {"p1", "p2", "alpha"} - set(removed)
+
+
+def test_no_swap_no_replacement(cfg):
+    from rigsmith.plan import replacements
+    from rigsmith.state import State
+
+    install(cfg, ids=["p1"])
+    assert replacements(cfg, P, State(), ["p1"], ["p1"]) is None

@@ -16,7 +16,7 @@ from textual.widgets.tree import TreeNode
 from rigsmith import config as cfgmod
 from rigsmith.config import Available, Config, ConfigError, Entry
 from rigsmith.model import QUESTIONS, Platform, Question
-from rigsmith.plan import Plan, build, questions_for, roles_for, select
+from rigsmith.plan import Plan, build, questions_for, replacements, roles_for, select
 from rigsmith.runner import status
 from rigsmith.state import State
 
@@ -471,15 +471,6 @@ async def questionnaire(app: App[Any], cfg: Config, p: Platform, ids, profile, s
         i += 1
 
 
-def replacements(cfg: Config, p: Platform, picked: list[str]) -> list[str]:
-    """Installed, rigsmith-managed role providers the user swapped for another one."""
-    state, out = State(), []
-    for members in roles_for(cfg, cfg.ids).values():
-        if any(m in picked for m in members):
-            out += [m for m in members if m not in picked and state.managed(m) and cfg.library[m].present(p)]
-    return out
-
-
 class PathScreen(Screen[str | None]):
     """Ask for the path of a YAML config."""
 
@@ -575,7 +566,7 @@ async def install_flow(
             res = await app.push_screen_wait(screen_for(question_step(q, answers), n, len(missing)))
             answers[q.id] = q.default if res is None else res
         plan = build(menu, p, answers=answers, picked=picked_ids)
-        plan.replace = replacements(menu, p, picked_ids)
+        plan.replace = replacements(menu, p, State(), picked_ids, plan.order)
         choice = await app.push_screen_wait(ConfirmScreen(plan_report(menu, plan, p)))
         if choice == "go":
             return plan, menu, base
