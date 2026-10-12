@@ -25,7 +25,9 @@ grep -q "Installed: 0 changes" /tmp/second.log
 echo "::endgroup::"
 
 echo "::group::a login shell loads every snippet"
-zsh -i -c 'echo "zsh ok: $ZSH_VERSION"' </dev/null
+if command -v zsh >/dev/null; then
+  zsh -i -c 'echo "zsh ok: $ZSH_VERSION"' </dev/null
+fi
 echo "::endgroup::"
 
 echo "::group::uninstall"
