@@ -18,7 +18,6 @@ echo "::group::install"
 rs install "${ARGS[@]}" -y
 echo "::endgroup::"
 uv run python tests/e2e/check.py installed "${ARGS[@]}"
-test "$(git config --global init.defaultBranch)" = main
 
 echo "::group::second install must change nothing"
 rs install "${ARGS[@]}" -y | tee /tmp/second.log

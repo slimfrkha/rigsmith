@@ -6,6 +6,7 @@ check.py uninstalled [-c CFG] [-p PROFILE] [-s SECTION]...   no receipts left, p
 
 import argparse
 import json
+import subprocess
 import sys
 from pathlib import Path
 
@@ -34,6 +35,10 @@ if args.mode == "installed":
     for i in plan.order:
         if (st := status(cfg.library[i], p)) != "installed":
             bad.append(f"{i}: {st}")
+    if "git-defaults" in plan.order:  # run.sh pre-set it to `trunk`: install must have modified it
+        branch = subprocess.run(["git", "config", "--global", "init.defaultBranch"], capture_output=True, text=True)
+        if branch.stdout.strip() != "main":
+            bad.append(f"init.defaultBranch is {branch.stdout.strip()!r}, expected 'main'")
     pre = [r.artifact for r in state.receipts.values() if r.key.startswith("pkg:") and r.op == NOOP]
     PRE.write_text(json.dumps(pre))
     print(f"installed: {len(plan.order)} artifacts, {len(pre)} pre-existing: {', '.join(pre)}")
