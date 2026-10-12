@@ -293,3 +293,18 @@ def test_an_artifact_with_nothing_to_do_yet_is_missing_not_installed():
     from rigsmith.model import ARTIFACTS
 
     assert status(ARTIFACTS["git-identities"], P, {}) == "missing"  # no work folder answered yet
+
+
+def test_atuin_never_reimports_into_an_existing_history(home, monkeypatch):
+    from rigsmith.library import shell
+    from rigsmith.model import ARTIFACTS
+
+    calls = []
+    monkeypatch.setattr(shell, "run", lambda cmd, **kw: calls.append(cmd))
+    db = home / ".local/share/atuin/history.db"
+    ARTIFACTS["atuin"].post_install()
+    assert calls == ["atuin import auto"]  # fresh atuin: import the shell history once
+    db.parent.mkdir(parents=True)
+    db.write_bytes(b"x")
+    ARTIFACTS["atuin"].post_install()
+    assert calls == ["atuin import auto"]  # existing history: no duplicates

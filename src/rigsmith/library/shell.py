@@ -1,5 +1,8 @@
 """zsh, its plugin manager, prompt, plugins, history and helpers."""
 
+import os
+from pathlib import Path
+
 from rigsmith.backends import Apt, Brew, GitClone
 from rigsmith.effects import Effect, LoginShellEffect
 from rigsmith.library._util import snippet, tool
@@ -82,8 +85,10 @@ snippet(
 
 
 class Atuin(Artifact):
-    def post_install(self) -> None:  # irreversible: imports existing history once
-        run("atuin import auto", check=False)
+    def post_install(self) -> None:  # irreversible: imports existing shell history, only into an empty atuin
+        db = Path(os.environ.get("ATUIN_DATA_DIR") or Path.home() / ".local/share/atuin") / "history.db"
+        if not db.exists():  # an atuin that already has history would get duplicates
+            run("atuin import auto", check=False)
 
 
 Atuin(
