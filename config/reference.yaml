@@ -40,6 +40,9 @@ sections:
       catppuccin-iterm: standard
 
   cli:
+    sessions:
+      tmux: standard
+      tmux-config: standard
     files:
       eza: minimal
       eza-aliases: minimal
@@ -70,12 +73,14 @@ sections:
       bottom: comprehensive
       btop: comprehensive
       dust: standard
+      ncdu: comprehensive
       duf: standard
       procs: comprehensive
       sys-aliases: standard
     network:
       httpie: standard
       wget: standard
+      mosh: comprehensive
     docs:
       tldr: standard
     misc:
@@ -318,6 +323,8 @@ sections:
       database-client: comprehensive
 
   ml:
+    gpu:
+      nvitop: standard
     notebooks:
       jupyterlab: standard
       marimo: comprehensive

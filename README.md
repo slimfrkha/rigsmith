@@ -89,7 +89,8 @@ Every flag is in the [reference](docs/reference.md#commands).
 | [`data-engineer`](config/presets/data-engineer.yaml) | Python + SQL in the terminal (DuckDB, Postgres, Kafka), notebooks, cloud CLIs |
 | [`ml-engineer`](config/presets/ml-engineer.yaml) | Python with uv, notebooks, Hugging Face, local LLMs |
 | [`platform`](config/presets/platform.yaml) | Containers, Kubernetes end to end, Terraform and friends, GCP and AWS |
-| [`server`](config/presets/server.yaml) | A headless box over SSH: shell and modern CLI, no fonts or GUI apps |
+| [`ssh`](config/presets/ssh.yaml) | A remote dev box you SSH into (cloud VM, GPU machine): tmux, modern CLI, git, uv, GPU monitor |
+| [`server`](config/presets/server.yaml) | A lean ops box: shell and modern CLI only |
 
 The developer presets share a base (zsh, starship, fzf, ripgrep, eza, zoxide, git, lazygit, VS Code); `server` keeps
 only the shell and CLI part. Every preset pins its answers, so `-y` gives the same result every time. [`reference`](config/reference.yaml) has every tool;

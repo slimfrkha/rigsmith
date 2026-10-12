@@ -1,0 +1,74 @@
+# Remote dev box over SSH (cloud VM, GPU machine): a comfortable zsh, tmux sessions that survive disconnects, the
+# modern CLI, git, Python with uv and GPU monitoring. No GUI apps, fonts or VS Code: icons render with your local
+# terminal's font, and VS Code's Remote-SSH brings its own server. For a lean ops box, see the `server` preset.
+# Use it: rigsmith install -c ssh -y   (Linux needs sudo once, for Homebrew and to make zsh the login shell)
+#
+#   minimal        a livable login: zsh, starship, tmux, core CLI, git, uv
+#   standard       a dev box: + history search, disk tools, GPU monitor, Python extras, lazygit, gh
+#   comprehensive  everything: + kubectl/k9s, mosh, more TUIs, delta, huggingface-cli
+profiles: [minimal, standard, comprehensive]
+
+sections:
+  system:
+    bootstrap: {homebrew: minimal, apt-base: minimal}
+
+  shell:
+    core: {zsh: minimal, zinit: minimal}
+    prompt: {starship: minimal}
+    plugins:
+      zsh-autosuggestions: minimal
+      zsh-syntax-highlighting: minimal
+      zsh-completions: standard
+      zsh-history-substring-search: standard
+    history: {atuin: standard}
+    helpers: {shell-aliases: minimal, shell-functions: standard}
+
+  cli:
+    sessions: {tmux: minimal, tmux-config: minimal}
+    files: {eza: minimal, eza-aliases: minimal, tree: standard, yazi: comprehensive}
+    search:
+      ripgrep: minimal
+      ripgrep-aliases: minimal
+      fd: minimal
+      fzf: minimal
+      fd-aliases: standard
+      fzf-functions: standard
+    view-edit: {bat: minimal, bat-aliases: minimal, micro: minimal}
+    navigation: {zoxide: minimal}
+    data: {jq: minimal, yq: standard}
+    system:
+      htop: minimal
+      dust: standard
+      duf: standard
+      ncdu: standard
+      sys-aliases: standard
+      btop: comprehensive
+    network: {wget: standard, mosh: comprehensive}
+    docs: {tldr: comprehensive}
+
+  git:
+    core: {git: minimal, git-aliases: minimal, gh: standard, git-defaults: standard}
+    ui: {lazygit: standard}
+    diff: {delta: comprehensive}
+
+  python:
+    tooling: {uv: minimal, python-aliases: standard, ipython: standard, ruff: comprehensive}
+
+  ml:
+    gpu: {nvitop: standard}
+    models: {huggingface-cli: comprehensive}
+
+  containers:
+    tools: {docker-aliases: standard}
+
+  kubernetes:
+    core: {kubectl: comprehensive, k8s-aliases: comprehensive}
+    ui: {k9s: comprehensive}
+
+answers:
+  profile: standard
+  system-monitor: htop
+  icons: "yes"
+  aliases: "yes"
+  tui: "yes"
+  theme: catppuccin

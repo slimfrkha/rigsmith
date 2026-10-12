@@ -12,4 +12,10 @@ tool(
     bin="hf",
 )
 tool("llm", "Simon Willison's llm: talk to LLMs from the terminal, log everything to SQLite.", sources=[UvTool("llm")])
+tool(
+    "nvitop",
+    "Interactive NVIDIA GPU monitor: utilization, memory and processes per GPU (Linux).",
+    sources=[UvTool("nvitop", os="linux")],
+    tags=["tui"],
+)
 tool("ollama", "Run open LLMs locally: `ollama run llama3.2`.")

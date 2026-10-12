@@ -1,7 +1,17 @@
 """Modern command-line tools and the aliases that swap them in for the classics."""
 
 from rigsmith.library._util import snippet, tool
-from rigsmith.model import Snippet
+from rigsmith.model import Artifact, File, Snippet
+
+# sessions
+tool("tmux", "Terminal multiplexer: sessions survive SSH disconnects. Detach with prefix + d, come back with `ta`.")
+Artifact(
+    id="tmux-config",
+    help="Sane tmux defaults (mouse, 50k scrollback, true color, windows from 1); `ta` attaches or creates a session.",
+    files=[File("tmux.conf", "~/.tmux.conf")],
+    shell=Snippet("tmux-config.zsh", 70),
+    requires=["tmux"],
+)
 
 # files
 tool("eza", "Modern ls with colors, git status and optional icons. `eza -la --git`, `eza --tree`.")
@@ -96,6 +106,7 @@ tool(
 )
 tool("btop", "Resource monitor with graphs and mouse support.", role="system-monitor", tags=["tui"])
 tool("dust", "Intuitive du: which directories eat your disk.")
+tool("ncdu", "Disk usage explorer: browse what fills the disk and delete in place.", tags=["tui"])
 tool("duf", "Friendly df: disk usage overview.")
 tool("procs", "Modern ps with colors, tree view and search.")
 snippet(
@@ -108,6 +119,7 @@ snippet(
 # network
 tool("httpie", "Human-friendly HTTP client: `http GET api.example.com`.", bin="http")
 tool("wget", "Download files from the web.")
+tool("mosh", "Mobile shell: an SSH session that survives roaming, sleep and bad networks (needs mosh on both ends).")
 
 # docs & misc
 tool("tldr", "Simplified, example-driven man pages (tlrc client): `tldr tar`.", brew="tlrc")

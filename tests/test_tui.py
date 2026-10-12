@@ -77,7 +77,9 @@ def test_first_run_picks_a_preset_or_a_file(home):
     async def job(app):
         return await choose_base(app, bases)
 
-    name, cfg = drive(job, ["up", "up", "up", "enter"])
+    names = [b.name for b in bases]
+    ups = names.index("reference") - names.index("server")  # the cursor starts on reference
+    name, cfg = drive(job, ["up"] * ups + ["enter"])
     assert name == "server" and cfg.name.endswith("server.yaml")
 
     mine = home / "mine.yaml"
