@@ -17,7 +17,16 @@ from rigsmith import config as cfgmod
 from rigsmith import library  # noqa: F401  (registers built-in artifacts)
 from rigsmith.config import Config, ConfigError, Entry
 from rigsmith.model import Platform, ensure_path
-from rigsmith.plan import Plan, active_providers, build, inactive_providers, plan_removal, removal_candidates, select
+from rigsmith.plan import (
+    Plan,
+    active_providers,
+    build,
+    inactive_providers,
+    plan_removal,
+    questions_for,
+    removal_candidates,
+    select,
+)
 from rigsmith.runner import Result, Runner, pending, status
 from rigsmith.script import install_script, uninstall_script
 from rigsmith.shell import conflicts
@@ -179,7 +188,8 @@ def scan(
 def plan_report(cfg: Config, plan: Plan, p: Platform) -> list[str]:
     """The diff screen as markup lines: answers, already in place, to install, caveats."""
     state = State()
-    lines = ["[bold]Answers:[/] " + ", ".join(f"{k}={v}" for k, v in plan.answers.items())]
+    used = {"profile"} | {cfg.library[i].role for i in plan.order} | {q.id for q in questions_for(cfg, plan.order)}
+    lines = ["[bold]Answers:[/] " + ", ".join(f"{k}={v}" for k, v in plan.answers.items() if k in used)]
     todo, done, irreversible, labels = [], [], [], {}
     for i in plan.order:
         effs = pending(cfg.library[i], p, state, plan.answers)

@@ -158,6 +158,8 @@ class Runner:
                 res.ok.append(i)
                 res.changes += changed
                 self.state.requested.discard(i)
+                if art and art.role and self.state.answers.get(art.role) == i:
+                    del self.state.answers[art.role]  # removed on purpose: no longer the pick
                 self.say(f"[{n}/{len(order)}] ✓ {i}" + (f" ({changed} changes)" if changed else ""))
             if not has_snippets():
                 res.changes += self._execute_undo(CORE, reconcile.undo_shell_integration(self.state), res)

@@ -170,7 +170,7 @@ def install_steps(
     scope = [e.id for e in select(cfg, ids=ids, profile=prof, sections=chosen or sections)]
     for role, cands in roles_for(cfg, scope).items():
         installed = installed_providers(cfg, p, cands)
-        default = default_provider(cfg, p, role, cands, answers)
+        default = default_provider(role, cands, installed, answers)
         options = [
             (c, f"{c}{' [green](installed)[/]' if c in installed else ''}  [dim]{cfg.library[c].help}[/]")
             for c in cands

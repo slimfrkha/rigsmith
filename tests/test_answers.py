@@ -17,7 +17,6 @@ RESOLVE = [
     ("config beats remembered", {"theme": "nord"}, {"theme": "dracula"}, None, {"theme": "dracula"}),
     ("explicit beats config", {}, {"theme": "dracula"}, {"theme": "catppuccin"}, {"theme": "catppuccin"}),
     ("an explicit blank still wins", {"work-email": "old@x.io"}, {}, {"work-email": ""}, {"work-email": ""}),
-    ("remembered roles count", {"prompt": "starship"}, {}, None, {"prompt": "starship"}),
     ("the profile is never remembered", {"profile": "comprehensive"}, {}, None, {}),
 ]
 

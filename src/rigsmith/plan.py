@@ -88,9 +88,8 @@ def installed_providers(cfg: Config, p: Platform, cands: list[str]) -> list[str]
     return [i for i in cands if cfg.library[i].sources and cfg.library[i].present(p)]
 
 
-def default_provider(cfg: Config, p: Platform, role: str, cands: list[str], answers: dict[str, str]) -> str:
+def default_provider(role: str, cands: list[str], installed: list[str], answers: dict[str, str]) -> str:
     """The installed provider (never replaced implicitly), else the answered one, else the first in config order."""
-    installed = installed_providers(cfg, p, cands)
     if installed:
         return installed[0]
     return answers[role] if answers.get(role) in cands else cands[0]
@@ -132,8 +131,8 @@ def build(
         if picked is not None:
             keep = [i for i in cands if i in picked][:1]
         else:
-            keep = [default_provider(cfg, p, role, cands, answers)]
             installed, wanted = installed_providers(cfg, p, cands), answers.get(role)
+            keep = [default_provider(role, cands, installed, answers)]
             if installed and wanted and wanted != keep[0]:
                 plan.warnings.append(f"{role}: keeping installed {keep[0]} (answer was {wanted})")
             if len(installed) > 1:
