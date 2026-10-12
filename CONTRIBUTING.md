@@ -12,6 +12,11 @@ uv run python scripts/check_sources.py     # every brew name and VS Code extensi
 
 Never run `tests/e2e/run.sh` on a machine you care about: it really installs and uninstalls things.
 
+## Pull requests
+
+`main` is protected: changes land through a pull request approved by the code owner, history stays linear
+(squash or rebase merges only), and force pushes and branch deletion are blocked. Fork, branch, open a PR.
+
 ## Adding an artifact
 
 1. Add it to the section's module in [`src/rigsmith/library/`](src/rigsmith/library). Most tools are one line:
