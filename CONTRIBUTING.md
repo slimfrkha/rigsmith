@@ -41,7 +41,8 @@ verify (`~/.zshrc` byte-identical) on throwaway machines:
 
 Releases publish to PyPI from GitHub Actions through a
 [trusted publisher](https://docs.pypi.org/trusted-publishers/) (owner `slimfrkha`, repo `rigsmith`, workflow
-`release.yml`, environment `pypi`), so no token is stored anywhere.
+`release.yml`, environment `pypi`), so no token is stored anywhere. The `pypi` environment only accepts `v*`
+tags and waits for the maintainer's approval, so nobody else can publish, collaborators included.
 
 1. Make sure `main` is green (`ci` and `e2e`).
 2. Bump `version` in [`pyproject.toml`](pyproject.toml) (`uv version --bump patch|minor|major`), commit, push.
@@ -52,7 +53,8 @@ Releases publish to PyPI from GitHub Actions through a
    git push origin v0.2.0
    ```
 
-4. [`release.yml`](.github/workflows/release.yml) checks the tag matches the version, builds, publishes to
+4. [`release.yml`](.github/workflows/release.yml) checks the tag matches the version, then **waits for
+   approval**: open the run in Actions → **Review deployments** → approve `pypi`. It then builds, publishes to
    PyPI and creates the GitHub release with generated notes.
 5. Check it the way a user would:
 
