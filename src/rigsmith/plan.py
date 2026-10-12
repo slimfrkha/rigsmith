@@ -172,16 +172,27 @@ def dependents(lib: dict[str, Artifact], target: str, among: list[str]) -> list[
 
 
 def with_orphans(lib: dict[str, Artifact], targets: list[str], managed: list[str], requested: set[str], p: Platform):
-    """`targets` plus the managed dependencies only they need, never ones the user asked for themselves."""
+    """`targets` plus the managed dependencies only they need, never ones the user asked for themselves.
+
+    The walk goes through dependencies rigsmith doesn't manage (e.g. a pre-existing git) to the managed ones
+    behind them (the Homebrew snippet it pulled in).
+    """
     out = list(targets)
     grew = True
     while grew:
         grew = False
-        for i in list(out):
-            for dep in lib[i].requirements(p) if i in lib else []:
-                if dep in out or dep not in managed or dep in requested:
+        stack, seen = list(out), set(out)
+        while stack:
+            for dep in lib[i].requirements(p) if (i := stack.pop()) in lib else []:
+                if dep in seen:
                     continue
-                if not any(dep in lib[j].requirements(p) for j in managed if j not in out and j in lib):
+                seen.add(dep)
+                if dep not in managed:
+                    stack.append(dep)  # not ours to remove, but look behind it
+                elif dep not in requested and not any(
+                    dep in lib[j].requirements(p) for j in managed if j not in out and j in lib
+                ):
                     out.append(dep)
+                    stack.append(dep)
                     grew = True
     return out

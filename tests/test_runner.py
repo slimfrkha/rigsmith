@@ -256,3 +256,17 @@ def test_git_identities_without_email_only_sets_the_folder_rule(home):
 
     effs = effects_for(ARTIFACTS["git-identities"], P, {"work-dir": "~/w/", "work-email": ""})
     assert [e.label for e in effs] == ["git config --global includeIf.gitdir:~/w/.path"]
+
+
+def test_orphans_behind_a_preexisting_dependency_are_removed_too(cfg):
+    from rigsmith.plan import with_orphans
+    from rigsmith.state import State
+
+    # hooked → beta (already on the machine, so not managed) → alpha (pulled in, managed)
+    cfg.library["hooked"].requires = ["beta"]
+    INSTALLED.add("beta")
+    install(cfg, ids=["hooked"])
+    st = State()
+    managed = [i for i in cfg.library if st.managed(i)]
+    assert "beta" not in managed and "alpha" in managed
+    assert with_orphans(cfg.library, ["hooked"], managed, st.requested, P) == ["hooked", "alpha"]
