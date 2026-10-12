@@ -6,12 +6,12 @@ description: >-
   lazygit-like tool", "add the Go extension", "put X in the platform preset", a pasted new-artifact issue, or a
   bare tool name in this repo. Also for swapping a tool's install source (a formula removed from Homebrew,
   a cask renamed). Do NOT use for engine changes (new backends, plan/runner/TUI logic, config format) or for
-  editing an existing artifact's help text, where you just edit and regenerate the catalog.
+  editing an existing artifact's help text, where you edit and regenerate the catalog.
 ---
 
 # Adding an artifact to rigsmith
 
-Read DESIGN.md §3 (artifact fields) once if you haven't this session. The laws govern; the rest serves them.
+Read the artifact fields in docs/reference.md#artifacts once if you haven't this session. The laws govern; the rest serves them.
 
 ## Laws
 

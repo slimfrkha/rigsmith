@@ -4,7 +4,8 @@ A Python CLI (`use` / `install` / `scan` / `uninstall` / `init`) that sets up ma
 library of **artifacts** (a package plus the config it needs), organized in a YAML **config** (sections,
 subsections, profiles). Every change it makes gets a **receipt**, so uninstall undoes exactly what it did.
 
-**Read first:** [DESIGN.md](DESIGN.md) (the model and vocabulary; use its terms) and
+**Read first:** [DESIGN.md](DESIGN.md) (the model, vocabulary and decisions; use its terms),
+[docs/reference.md](docs/reference.md) (commands, config keys, artifact fields) and
 [CONTRIBUTING.md](CONTRIBUTING.md) (adding artifacts, e2e, releasing). Adding or changing a library tool:
 follow the `add-artifact` skill in [.claude/skills/add-artifact](.claude/skills/add-artifact/SKILL.md).
 

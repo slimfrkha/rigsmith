@@ -85,3 +85,31 @@ def test_presets_pin_every_answer(name):
 
 def test_there_are_presets():
     assert len(config.presets()) >= 5
+
+
+def test_doc_links_resolve():
+    """Relative links and #anchors in the docs point at files and headings that exist."""
+    import re
+    from pathlib import Path
+
+    root = Path(__file__).resolve().parents[1]
+    docs = [root / f for f in ("README.md", "DESIGN.md", "CONTRIBUTING.md", "SECURITY.md", "CLAUDE.md")]
+    docs += sorted((root / "docs").glob("*.md"))
+
+    def anchors(path: Path) -> set[str]:
+        heads = re.findall(r"^#+ (.+)$", path.read_text(), re.M)
+        return {re.sub(r"[^\w\- ]", "", h).strip().lower().replace(" ", "-") for h in heads}
+
+    broken = []
+    for doc in docs:
+        text = re.sub(r"```.*?```", "", doc.read_text(), flags=re.S)  # links inside code blocks are examples
+        for target in re.findall(r"\]\(([^)\s]+)\)", text):
+            if target.startswith(("http://", "https://", "mailto:")):
+                continue
+            path, _, anchor = target.partition("#")
+            dest = (doc.parent / path).resolve() if path else doc
+            if not dest.exists():
+                broken.append(f"{doc.name}: {target}")
+            elif anchor and dest.suffix == ".md" and anchor not in anchors(dest):
+                broken.append(f"{doc.name}: {target} (no such heading)")
+    assert broken == []

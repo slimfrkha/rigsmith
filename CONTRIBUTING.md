@@ -1,5 +1,8 @@
 # Contributing
 
+For people changing rigsmith itself: the engine, the built-in library, releases. To add tools to *your own* setup,
+see the [guide](docs/guide.md#add-your-own-tools) instead.
+
 ## Setup
 
 ```sh
@@ -21,7 +24,7 @@ Never run `tests/e2e/run.sh` on a machine you care about: it really installs and
 
 1. Add it to the section's module in [`src/rigsmith/library/`](src/rigsmith/library). Most tools are one line:
    `tool("eza", "Modern ls with colors and git status.")`. Use `ext(...)` for VS Code extensions,
-   or a full `Artifact(...)` for anything else ([DESIGN.md §3](DESIGN.md) lists every field).
+   or a full `Artifact(...)` for anything else (every field is in the [reference](docs/reference.md#artifacts)).
 2. Config the tool **needs** to work (PATH, `eval "$(tool init zsh)"`) goes in its snippet. Aliases, themes and
    preferences go in a separate artifact that `requires` it, so configs can take the tool without the taste.
 3. Snippets go in `src/rigsmith/library/snippets/`, at the right phase:

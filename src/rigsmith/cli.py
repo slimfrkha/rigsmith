@@ -308,7 +308,7 @@ def use(
     source: Annotated[
         str | None, typer.Argument(help="Preset name or path to a YAML config.", show_default=False)
     ] = None,
-    yes: YesOpt = False,
+    yes: Annotated[bool, typer.Option("-y", "--yes", help="Replace an existing config without asking.")] = False,
 ) -> None:
     """Choose your config: copies a preset (or your own YAML) to ~/.config/rigsmith/config.yaml."""
     if source is None:
