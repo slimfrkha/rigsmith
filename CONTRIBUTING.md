@@ -53,8 +53,8 @@ tags and waits for the maintainer's approval, so nobody else can publish, collab
    git push origin v0.2.0
    ```
 
-4. [`release.yml`](.github/workflows/release.yml) checks the tag matches the version, then **waits for
-   approval**: open the run in Actions → **Review deployments** → approve `pypi`. It then builds, publishes to
+4. [`release.yml`](.github/workflows/release.yml) **waits for your approval**: open the run in Actions →
+   **Review deployments** → approve `pypi`. It then checks the tag matches the version, builds, publishes to
    PyPI and creates the GitHub release with generated notes.
 5. Check it the way a user would:
 
