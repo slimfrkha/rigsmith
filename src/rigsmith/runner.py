@@ -10,6 +10,7 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
 
+from rigsmith import answers as answersmod
 from rigsmith import model, reconcile
 from rigsmith.config import Config
 from rigsmith.effects import (
@@ -79,7 +80,7 @@ class Runner:
         res, order = Result(), plan.order
         self.state.requested |= {i for i, why in plan.reasons.items() if why == "selected"}
         todo = {i: pending(cfg.library[i], self.p, self.state, plan.answers) for i in order}
-        self.state.answers.update({k: v for k, v in plan.answers.items() if k != "profile"})
+        answersmod.remember(self.state, plan.answers)
         # packages missing when the run starts: if one appears before its turn, this run brought it in
         absent = {e.key for effs in todo.values() for e in effs if isinstance(e, PackageEffect)}
         with self._log("install"):

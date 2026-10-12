@@ -33,6 +33,7 @@ Library changes also need `uv run python scripts/gen_catalog.py` (regenerate doc
 |---|---|
 | `src/rigsmith/model.py` | Platform, Artifact, Question, Backend base, registries |
 | `src/rigsmith/backends.py` | one class per package manager (Brew, Cask, Apt, Release, VSCodeExt, …) |
+| `src/rigsmith/answers.py` | answer precedence (explicit → config → remembered), what's remembered, prefs env |
 | `src/rigsmith/plan.py` | filters → questions → roles → dependency closure → order; uninstall: candidates → orphans → order |
 | `src/rigsmith/effects.py`, `settings.py` | what an artifact changes, each able to report/apply/restore |
 | `src/rigsmith/reconcile.py` | decisions: every receipt rule (install, uninstall, dry-run and `--script` share them) |

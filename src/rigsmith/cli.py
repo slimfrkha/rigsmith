@@ -12,6 +12,7 @@ import typer
 from rich.console import Console
 from rich.text import Text
 
+from rigsmith import answers as answersmod
 from rigsmith import config as cfgmod
 from rigsmith import library  # noqa: F401  (registers built-in artifacts)
 from rigsmith.config import Config, ConfigError, Entry
@@ -127,7 +128,7 @@ def scan(
         entries = [e for e in entries if active.entry(e.id) is None]
     p, state = Platform.detect(), State()
     header(active)
-    roles_active = active_providers(cfg, p, {**state.answers, **active.answers})
+    roles_active = active_providers(cfg, p, answersmod.resolve(active, state.answers))
 
     counts: dict[str, int] = {}
     last: tuple[str, str] | None = None
@@ -157,7 +158,7 @@ def scan(
         missing = [id for id in library_config(active).ids if active.entry(id) is None]
         if missing:
             console.print(f"[cyan]ℹ {len(missing)} library artifacts are not in your config — `scan --all --new`[/]")
-    inactive, ambiguous = inactive_providers(cfg, p, {**state.answers, **active.answers})
+    inactive, ambiguous = inactive_providers(cfg, p, answersmod.resolve(active, state.answers))
     for i, role, winner in inactive:
         console.print(
             f"[yellow]⚠ {i} is installed but inactive ({role} → {winner}) — `rigsmith uninstall --inactive`[/]"

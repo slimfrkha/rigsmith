@@ -13,10 +13,21 @@ from textual.widgets import Footer, Header, Input, OptionList, SelectionList, St
 from textual.widgets.option_list import Option
 from textual.widgets.tree import TreeNode
 
+from rigsmith import answers as answersmod
 from rigsmith import config as cfgmod
 from rigsmith.config import Available, Config, ConfigError, Entry
-from rigsmith.model import QUESTIONS, Platform, Question
-from rigsmith.plan import Plan, build, questions_for, replacements, roles_for, select
+from rigsmith.model import Platform, Question
+from rigsmith.plan import (
+    Plan,
+    build,
+    default_provider,
+    installed_providers,
+    questions_for,
+    replacements,
+    resolve_profile,
+    roles_for,
+    select,
+)
 from rigsmith.runner import status
 from rigsmith.state import State
 
@@ -155,12 +166,11 @@ def install_steps(
                 multi=True,
             )
         )
-    prof = profile or answers.get("profile") or (None if ids else cfg.profiles[0])
+    prof = resolve_profile(cfg, profile, ids, answers)
     scope = [e.id for e in select(cfg, ids=ids, profile=prof, sections=chosen or sections)]
     for role, cands in roles_for(cfg, scope).items():
-        installed = [c for c in cands if cfg.library[c].sources and cfg.library[c].present(p)]
-        wanted = answers.get(role, "")
-        default = installed[0] if installed else wanted if wanted in cands else cands[0]
+        installed = installed_providers(cfg, p, cands)
+        default = default_provider(cfg, p, role, cands, answers)
         options = [
             (c, f"{c}{' [green](installed)[/]' if c in installed else ''}  [dim]{cfg.library[c].help}[/]")
             for c in cands
@@ -446,13 +456,8 @@ class Flow(App[Any]):
         self.exit(await self.job(self))
 
 
-def remembered_answers(cfg: Config) -> dict[str, str]:
-    """Last run's question answers as defaults, overridden by what the config pins."""
-    return {**{k: v for k, v in State().answers.items() if k in QUESTIONS}, **cfg.answers}
-
-
 async def questionnaire(app: App[Any], cfg: Config, p: Platform, ids, profile, sections) -> tuple | None:
-    answers, chosen, i = remembered_answers(cfg), list(sections), 0
+    answers, chosen, i = answersmod.resolve(cfg, State().answers), list(sections), 0
     while True:
         steps = install_steps(cfg, p, ids, profile, sections, answers, chosen)
         if i >= len(steps):
@@ -554,8 +559,7 @@ async def install_flow(
     if q is None:
         return None
     answers, chosen = q
-    prof = profile or answers.get("profile")
-    start = build(menu, p, ids=ids, profile=prof, sections=chosen or sections, answers=answers)
+    start = build(menu, p, ids=ids, profile=profile, sections=chosen or sections, answers=answers)
     ticked = {i for i in start.order if menu.entry(i)}
     while True:
         picked_ids = await app.push_screen_wait(PickerScreen(menu, p, menu.entries, ticked))
