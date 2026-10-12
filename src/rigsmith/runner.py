@@ -10,22 +10,21 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
 
-from rigsmith import model
+from rigsmith import model, reconcile
 from rigsmith.config import Config
 from rigsmith.effects import (
     LIBRARY,
     Effect,
     FileEffect,
-    LoginShellEffect,
     PackageEffect,
     PostInstallEffect,
     snippet_effects,
 )
-from rigsmith.model import QUESTIONS, Artifact, Platform, state_home
+from rigsmith.model import Artifact, Platform, state_home
 from rigsmith.plan import Plan
-from rigsmith.settings import GitConfigEffect, setting_effects
-from rigsmith.shell import CORE, ZshrcBlock, core_effects, has_snippets
-from rigsmith.state import CREATED, IRREVERSIBLE, MODIFIED, NOOP, Receipt, State
+from rigsmith.settings import setting_effects
+from rigsmith.shell import CORE, has_snippets
+from rigsmith.state import CREATED, IRREVERSIBLE, NOOP, Receipt, State
 
 
 def effects_for(art: Artifact, p: Platform, answers: dict[str, str] | None = None) -> list[Effect]:
@@ -56,18 +55,8 @@ def status(art: Artifact, p: Platform, answers: dict[str, str] | None = None) ->
 
 
 def pending(art: Artifact, p: Platform, state: State, answers: dict[str, str] | None = None) -> list[Effect]:
-    """Effects an install would apply (ignores effects the user changed since install)."""
-    out = []
-    for e in effects_for(art, p, state.answers if answers is None else answers):
-        r = state.get(e.key)
-        if not e.inspectable:
-            if not r:
-                out.append(e)
-            continue
-        cur = e.current()
-        if cur != e.desired() and not (r and r.op != NOOP and cur != r.after):
-            out.append(e)
-    return out
+    """The effects an install of `art` would change, as of now."""
+    return reconcile.pending(effects_for(art, p, state.answers if answers is None else answers), state)
 
 
 @dataclass
@@ -83,7 +72,6 @@ class Result:
 class Runner:
     def __init__(self, p: Platform, say: Callable[[str], None] = print) -> None:
         self.p, self.say, self.state = p, say, State()
-        self._absent_at_start: set[str] = set()
 
     # ── install ──────────────────────────────────────────────────────────────
 
@@ -93,7 +81,7 @@ class Runner:
         todo = {i: pending(cfg.library[i], self.p, self.state, plan.answers) for i in order}
         self.state.answers.update({k: v for k, v in plan.answers.items() if k != "profile"})
         # packages missing when the run starts: if one appears before its turn, this run brought it in
-        self._absent_at_start = {e.key for effs in todo.values() for e in effs if isinstance(e, PackageEffect)}
+        absent = {e.key for effs in todo.values() for e in effs if isinstance(e, PackageEffect)}
         with self._log("install"):
             if any(e.sudo for effs in todo.values() for e in effs):
                 sudo_upfront(self.say)
@@ -107,7 +95,8 @@ class Runner:
                 if todo[i]:
                     self.say(f"[{n}/{len(order)}] … {i}: {', '.join(e.label for e in todo[i])}")
                 try:
-                    changed = sum(self._apply(e, res) for e in effects_for(art, self.p, plan.answers))
+                    decisions = reconcile.install(effects_for(art, self.p, plan.answers), self.state, absent)
+                    changed = sum(self._execute(e, d, res) for e, d in decisions)
                 except Exception as e:  # one artifact failing must not stop the run
                     res.failed[i] = str(e)
                     self.say(f"[{n}/{len(order)}] ✗ {i}: {e}")
@@ -120,37 +109,30 @@ class Runner:
                     res.notes += art.notes
                 self.say(f"[{n}/{len(order)}] ✓ {i}" + (f" ({changed} changes)" if changed else ""))
             if has_snippets():
-                res.changes += sum(self._apply(e, res) for e in core_effects(prefs_env(self.state.answers)))
+                core = reconcile.shell_integration(self.state.answers, self.state)
+                res.changes += sum(self._execute(e, d, res) for e, d in core)
             self.state.save()
         return res
 
-    def _apply(self, e: Effect, res: Result) -> int:
-        """Apply one effect following the receipt rules. Returns 1 if the system changed."""
-        r = self.state.get(e.key)
-        if not e.inspectable:
-            if r:
-                return 0
+    def _execute(self, e: Effect, d: reconcile.Decision, res: Result) -> int:
+        """Carry out one install decision. Receipts are committed only after the change succeeded."""
+        if d.action == reconcile.KEEP:
+            res.warnings.append(d.reason)
+        elif d.action == reconcile.RECORD:
+            self.state.put(Receipt(e.key, e.artifact, d.op or NOOP, e.desired()))
+        elif d.action == reconcile.RUN_ONCE:
             e.apply()
             self.state.put(Receipt(e.key, e.artifact, IRREVERSIBLE, e.desired()))
-            return 1
-        cur, want = e.current(), e.desired()
-        if cur == want:
-            if not r:  # pulled in earlier in this run (e.g. an extension's dependency) → rigsmith owns it
-                op = CREATED if e.key in self._absent_at_start else NOOP
-                self.state.put(Receipt(e.key, e.artifact, op, want))
-            return 0
-        if r and r.op != NOOP:
-            if cur != r.after:
-                res.warnings.append(f"{e.label}: changed since install, kept")
-                return 0
-            e.apply()  # our own earlier version: update it, keep the original undo data
-            r.after = want
-            return 1
-        backup = e.backup()
-        e.apply()
-        op = IRREVERSIBLE if not e.reversible else CREATED if cur is None else MODIFIED
-        self.state.put(Receipt(e.key, e.artifact, op, want, backup))
-        return 1
+        elif d.action == reconcile.UPDATE:
+            want = e.desired()
+            e.apply()
+            if r := self.state.get(e.key):
+                r.after = want
+        elif d.action == reconcile.APPLY:
+            want, backup = e.desired(), e.backup()
+            e.apply()
+            self.state.put(Receipt(e.key, e.artifact, d.op or CREATED, want, backup))
+        return int(d.changes)
 
     # ── uninstall ────────────────────────────────────────────────────────────
 
@@ -177,39 +159,31 @@ class Runner:
                 self.state.requested.discard(i)
                 self.say(f"[{n}/{len(order)}] ✓ {i}" + (f" ({changed} changes)" if changed else ""))
             if not has_snippets():
-                res.changes += self._undo_artifact(CORE, {}, False, res)
+                res.changes += self._execute_undo(CORE, reconcile.undo_shell_integration(self.state), res)
             self.state.save()
         return res
 
     def _undo_artifact(self, id: str, effs: dict[str, Effect], include_unmanaged: bool, res: Result) -> int:
+        decisions = reconcile.undo(id, effs, self.state, include_unmanaged)
+        return self._execute_undo(id, decisions, res)
+
+    def _execute_undo(self, id: str, decisions, res: Result) -> int:
+        """Carry out undo decisions in order; each receipt is dropped once handled."""
         changed = 0
-        for r in reversed(self.state.for_artifact(id)):
-            e = effs.get(r.key) or generic_effect(r)
-            if r.op == NOOP:
-                if include_unmanaged and r.key.startswith("pkg:") and e and e.current() == r.after:
-                    e.restore(None)
-                    changed += 1
-            elif r.op == IRREVERSIBLE:
-                res.warnings.append(f"{id}: `{e.label if e else r.key}` can't be undone, kept")
-            elif e is None:
-                res.warnings.append(f"{id}: don't know how to undo {r.key}, kept")
-            else:
-                cur = e.current()
-                if cur == r.after:
-                    try:
-                        e.restore(r.backup)
-                    except Exception:
-                        if e.current() is not None:  # still there: a real failure
-                            raise
-                    changed += 1
-                elif cur is not None:
-                    res.warnings.append(f"{e.label}: changed since install, kept")
-            self.state.drop(r.key)
-        if include_unmanaged:  # installed before rigsmith and never touched by it: no receipt to replay
-            for e in effs.values():
-                if isinstance(e, PackageEffect) and not self.state.get(e.key) and e.current() == e.desired():
-                    e.restore(None)
-                    changed += 1
+        for e, r, d in decisions:
+            if d.action == reconcile.UNDO and e is not None:
+                try:
+                    e.restore(d.backup)
+                except Exception:
+                    if e.current() is not None:  # still there: a real failure
+                        raise
+                changed += 1
+            elif d.action in (reconcile.CANT_UNDO, reconcile.UNKNOWN):
+                res.warnings.append(f"{id}: {d.reason}")
+            elif d.action == reconcile.KEEP:
+                res.warnings.append(d.reason)
+            if r is not None:
+                self.state.drop(r.key)
         return changed
 
     def _log(self, what: str):
@@ -229,29 +203,6 @@ class _LogContext:
         if model.LOG:
             model.LOG.close()
         model.LOG = None
-
-
-def prefs_env(answers: dict[str, str]) -> dict[str, str]:
-    """Environment for every remembered question answer, not just this run's: installing one artifact must not
-    drop the preferences other installed snippets read (icons, theme)."""
-    env: dict[str, str] = {}
-    for qid, answer in answers.items():
-        if qid in QUESTIONS:
-            env.update(QUESTIONS[qid].env(answer))
-    return env
-
-
-def generic_effect(r: Receipt) -> Effect | None:
-    """Rebuild an effect from its receipt alone (artifact no longer in the library, or core files)."""
-    if r.key.startswith("file:"):
-        return FileEffect(r.artifact, Path(r.key[5:]), b"")
-    if r.key == "zshrc-block":
-        return ZshrcBlock()
-    if r.key == "login-shell":
-        return LoginShellEffect(r.artifact)
-    if r.key.startswith("git:") and isinstance(r.backup, dict) and "key" in r.backup:
-        return GitConfigEffect(r.artifact, r.backup["key"], "", r.backup.get("file"))
-    return None
 
 
 def sudo_upfront(say: Callable[[str], None]) -> None:

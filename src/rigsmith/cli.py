@@ -17,7 +17,7 @@ from rigsmith import library  # noqa: F401  (registers built-in artifacts)
 from rigsmith.config import Config, ConfigError, Entry
 from rigsmith.model import Platform, ensure_path
 from rigsmith.plan import Plan, active_providers, build, dependents, inactive_providers, select, toposort, with_orphans
-from rigsmith.runner import Result, Runner, effects_for, pending, status
+from rigsmith.runner import Result, Runner, pending, status
 from rigsmith.script import install_script, uninstall_script
 from rigsmith.shell import conflicts
 from rigsmith.state import NOOP, State
@@ -333,15 +333,7 @@ def uninstall(
         if needed := dependents(cfg.library, i, installed_elsewhere):
             console.print(f"[yellow]⚠ {i} is needed by: {', '.join(needed)} (they stay installed)[/]")
     if not include_unmanaged:
-        kept = [
-            i
-            for i in order
-            if any(
-                (r := state.get(e.key)) and r.op == NOOP
-                for e in effects_for(cfg.library[i], p)
-                if e.key.startswith("pkg:")
-            )
-        ]
+        kept = [i for i in order if any(r.op == NOOP and r.key.startswith("pkg:") for r in state.for_artifact(i))]
         if kept:
             console.print("[dim]Pre-existing packages left alone: " + ", ".join(kept) + "[/]")
     if dry_run:
