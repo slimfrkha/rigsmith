@@ -13,7 +13,8 @@ from textual.widgets import Footer, Header, Input, OptionList, SelectionList, St
 from textual.widgets.option_list import Option
 from textual.widgets.tree import TreeNode
 
-from rigsmith.config import Config, Entry
+from rigsmith import config as cfgmod
+from rigsmith.config import Available, Config, ConfigError, Entry
 from rigsmith.model import Platform
 from rigsmith.plan import Plan, build, questions_for, roles_for, select
 from rigsmith.runner import status
@@ -436,29 +437,105 @@ def replacements(cfg: Config, p: Platform, picked: list[str]) -> list[str]:
     return out
 
 
-def interactive_install(cfg: Config, p: Platform, *, ids, profile, sections) -> Plan | None:
+class PathScreen(Screen[str | None]):
+    """Ask for the path of a YAML config."""
+
+    BINDINGS = [Binding("escape", "back", "Back")]
+
+    def compose(self) -> ComposeResult:
+        yield Header()
+        yield Static("[bold]Path to your YAML config[/]\n[dim]enter to use it · esc back[/]", classes="title")
+        yield Input(placeholder="~/dotfiles/rigsmith.yaml", id="path")
+        yield Footer()
+
+    def on_mount(self) -> None:
+        self.query_one(Input).focus()
+
+    def on_input_submitted(self, event: Input.Submitted) -> None:
+        self.dismiss(event.value.strip() or None)
+
+    def action_back(self) -> None:
+        self.dismiss(None)
+
+
+OWN_FILE = "__file__"
+
+
+def base_step(bases: list[Available]) -> Step:
+    options = [(a.name, f"{a.name:<14} [dim]{a.count:>3} tools · {a.description}[/]") for a in bases]
+    return Step(
+        "base",
+        "Start from which menu?",
+        [*options, (OWN_FILE, "a YAML file of your own…")],
+        "reference",
+        "Presets are curated per kind of work; reference has everything. You can still adjust it all later.",
+    )
+
+
+async def choose_base(app: App[Any], bases: list[Available]) -> tuple[str, Config] | None:
+    """Pick a bundled config or a YAML path, loaded and validated. None if the user backs out."""
+    step = base_step(bases)
+    while True:
+        choice = await app.push_screen_wait(ChoiceScreen(step, 1, 1))
+        if choice is None:
+            return None
+        if choice == OWN_FILE:
+            choice = await app.push_screen_wait(PathScreen())
+            if choice is None:
+                continue
+        try:
+            cfgmod.load_user_artifacts()
+            cfg = cfgmod.load(choice)
+            if errors := cfgmod.validate(cfg):
+                raise ConfigError("; ".join(errors[:3]))
+        except ConfigError as e:
+            app.notify(str(e), title="Can't use that config", severity="error", timeout=8)
+            continue
+        return choice, cfg
+
+
+def pick_config(bases: list[Available]) -> str | None:
+    """`rigsmith use` without an argument."""
+
+    async def job(app: App[Any]) -> str | None:
+        picked = await choose_base(app, bases)
+        return picked[0] if picked else None
+
+    return Flow(job).run()
+
+
+def interactive_install(
+    cfg: Config, p: Platform, *, ids, profile, sections, bases: list[Available] | None = None
+) -> tuple[Plan, Config, str | None] | None:
+    """Questionnaire → picker → confirm. With `bases` (first run, no config yet) it starts by picking a menu."""
     from rigsmith.cli import plan_report  # noqa: PLC0415  (cli imports this module lazily)
 
-    async def job(app: App[Any]) -> Plan | None:
-        q = await questionnaire(app, cfg, p, ids, profile, sections)
+    async def job(app: App[Any]) -> tuple[Plan, Config, str | None] | None:
+        menu, base = cfg, None
+        if bases:
+            picked = await choose_base(app, bases)
+            if picked is None:
+                return None
+            base, menu = picked
+        q = await questionnaire(app, menu, p, ids, profile, sections)
         if q is None:
             return None
         answers, chosen = q
         prof = profile or answers.get("profile")
-        base = build(cfg, p, ids=ids, profile=prof, sections=chosen or sections, answers=answers)
-        ticked = {i for i in base.order if cfg.entry(i)}
+        start = build(menu, p, ids=ids, profile=prof, sections=chosen or sections, answers=answers)
+        ticked = {i for i in start.order if menu.entry(i)}
         while True:
-            picked = await app.push_screen_wait(PickerScreen(cfg, p, cfg.entries, ticked))
-            if picked is None:
+            picked_ids = await app.push_screen_wait(PickerScreen(menu, p, menu.entries, ticked))
+            if picked_ids is None:
                 return None
-            plan = build(cfg, p, answers=answers, picked=picked)
-            plan.replace = replacements(cfg, p, picked)
-            choice = await app.push_screen_wait(ConfirmScreen(plan_report(cfg, plan, p)))
+            plan = build(menu, p, answers=answers, picked=picked_ids)
+            plan.replace = replacements(menu, p, picked_ids)
+            choice = await app.push_screen_wait(ConfirmScreen(plan_report(menu, plan, p)))
             if choice == "go":
-                return plan
+                return plan, menu, base
             if choice is None:
                 return None
-            ticked = set(picked)
+            ticked = set(picked_ids)
 
     return Flow(job).run()
 

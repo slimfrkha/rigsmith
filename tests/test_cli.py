@@ -132,3 +132,39 @@ def test_editor_loop_reports_invalid_configs(cli, home, monkeypatch):
     monkeypatch.setenv("EDITOR", "true")  # an editor that changes nothing
     path.write_text(CONFIG)
     edit_until_valid(path)  # valid on first pass, returns without asking
+
+
+def test_use_copies_a_preset_and_every_command_shows_it(cli, home):
+    r = cli("use", "server", "-y")
+    assert r.exit_code == 0, r.output
+    text = (home / ".config/rigsmith/config.yaml").read_text()
+    assert text.startswith("# rigsmith: copied from server") and "# Headless server" in text
+    assert "config: your config (~/.config/rigsmith/config.yaml, from server)" in cli("scan", "-s", "cli").output
+
+
+def test_use_asks_before_replacing_and_lists_choices_without_a_tty(cli, home):
+    before = (home / ".config/rigsmith/config.yaml").read_text()
+    assert cli("use", "server", input="n\n").exit_code == 1
+    assert (home / ".config/rigsmith/config.yaml").read_text() == before
+    r = cli("use")  # CliRunner has no tty: print the menu instead of opening the picker
+    assert r.exit_code == 1 and "platform" in r.output and "rigsmith use <name>" in r.output
+
+
+def test_use_accepts_a_path_and_rejects_bad_configs(cli, home):
+    mine = home / "mine.yaml"
+    mine.write_text("profiles: [minimal]\nsections:\n  cli:\n    search: {ripgrep: minimal}\n")
+    assert cli("use", str(mine), "-y").exit_code == 0
+    assert (home / ".config/rigsmith/config.yaml").read_text().startswith(f"# rigsmith: copied from {mine}")
+    bad = home / "bad.yaml"
+    bad.write_text("profiles: [minimal]\nsections:\n  cli:\n    search: {nope: minimal}\n")
+    with pytest.raises(Exception, match="unknown artifact"):
+        cli("use", str(bad), "-y")
+
+
+def test_uninstall_sees_artifacts_installed_from_a_previous_config(cli, home):
+    cli("install", "t-base", "-y", "--unsupported")
+    assert installed(home) == {"t-base"}
+    cli("use", "server", "-y")  # t-base isn't in the new config…
+    assert "rigsmith also manages 1 not in this config: t-base" in cli("scan", "-s", "cli/files").output
+    cli("uninstall", "-y")  # …but its receipts still are
+    assert installed(home) == set()

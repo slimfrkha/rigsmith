@@ -1,6 +1,6 @@
 # CLAUDE.md: rigsmith operational map
 
-A Python CLI (`init` / `install` / `scan` / `uninstall`) that sets up macOS and Debian/Ubuntu machines from a
+A Python CLI (`use` / `install` / `scan` / `uninstall` / `init`) that sets up macOS and Debian/Ubuntu machines from a
 library of **artifacts** (a package plus the config it needs), organized in a YAML **config** (sections,
 subsections, profiles). Every change it makes gets a **receipt**, so uninstall undoes exactly what it did.
 

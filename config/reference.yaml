@@ -1,4 +1,4 @@
-# rigsmith reference menu: every built-in artifact, in its canonical section and profile.
+# Everything: every built-in artifact, in its canonical section and profile.
 # Fork it with `rigsmith init`, or point at a preset with `-c <preset>`.
 profiles: [minimal, standard, comprehensive]
 

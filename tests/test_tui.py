@@ -66,3 +66,23 @@ def test_picker_init_mode_sets_profiles(cfg):
     assert out["picked"] == ["alpha"] and out["profiles"]["alpha"] == "standard"
     out = picker(cfg, ["down", "down", "2", "enter"], ticked={"alpha"})  # profile keys only in init
     assert out == ["alpha"]
+
+
+def test_first_run_picks_a_preset_or_a_file(home):
+    from rigsmith import config
+    from rigsmith.tui import choose_base
+
+    bases = config.available()  # presets…, example, reference (default), then "a YAML file"
+
+    async def job(app):
+        return await choose_base(app, bases)
+
+    name, cfg = drive(job, ["up", "up", "up", "enter"])
+    assert name == "server" and cfg.name.endswith("server.yaml")
+
+    mine = home / "mine.yaml"
+    mine.write_text("profiles: [minimal]\nsections:\n  cli:\n    search: {ripgrep: minimal}\n")
+    name, cfg = drive(job, ["down", "enter", *str(mine), "enter"])
+    assert name == str(mine) and cfg.ids == ["ripgrep"]
+
+    assert drive(job, ["down", "enter", *"/nope.yaml", "enter", "escape", "escape"]) is None  # bad path → asked again

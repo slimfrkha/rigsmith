@@ -1,8 +1,10 @@
-"""rigsmith command line: init / install / scan / uninstall."""
+"""rigsmith command line: use / install / scan / uninstall / init."""
 
+import dataclasses
 import os
 import shlex
 import subprocess
+import sys
 from pathlib import Path
 from typing import Annotated
 
@@ -19,7 +21,11 @@ from rigsmith.runner import Result, Runner, effects_for, pending, status
 from rigsmith.shell import conflicts
 from rigsmith.state import NOOP, State
 
-app = typer.Typer(no_args_is_help=True, add_completion=False, help=__doc__)
+app = typer.Typer(
+    no_args_is_help=True,
+    add_completion=False,
+    help="Set up a machine from a curated, extensible library of tools and configs. Start with `rigsmith use`.",
+)
 console = Console(highlight=False)
 
 Ids = Annotated[list[str] | None, typer.Argument(help="Artifact ids (AND with the filters).", show_default=False)]
@@ -67,6 +73,17 @@ def library_config(active: Config) -> Config:
     return ref
 
 
+def with_managed(active: Config, state: State) -> Config:
+    """The active config plus every managed artifact it doesn't list (e.g. installed from an earlier config)."""
+    ref = library_config(active)
+    extra = [e for e in ref.entries if active.entry(e.id) is None and state.managed(e.id)]
+    return dataclasses.replace(active, entries=[*active.entries, *extra], library=ref.library)
+
+
+def header(cfg: Config) -> None:
+    console.print(f"[dim]config: {cfgmod.label(cfg.name)}[/]")
+
+
 ICON = {"installed": "[green]✓[/]", "partial": "[yellow]◐[/]", "missing": "[red]✗[/]", "n/a": "[dim]–[/]"}
 
 
@@ -89,6 +106,7 @@ def scan(
     if new:
         entries = [e for e in entries if active.entry(e.id) is None]
     p, state = Platform.detect(), State()
+    header(active)
 
     counts: dict[str, int] = {}
     last: tuple[str, str] | None = None
@@ -116,6 +134,12 @@ def scan(
         missing = [id for id in library_config(active).ids if active.entry(id) is None]
         if missing:
             console.print(f"[cyan]ℹ {len(missing)} library artifacts are not in your config — `scan --all --new`[/]")
+    elsewhere = [e.id for e in with_managed(active, state).entries if active.entry(e.id) is None]
+    if elsewhere and not (all or new):
+        console.print(
+            f"[cyan]ℹ rigsmith also manages {len(elsewhere)} not in this config: {', '.join(elsewhere[:8])}"
+            f"{'…' if len(elsewhere) > 8 else ''} — `rigsmith uninstall` still sees them[/]"
+        )
 
 
 # ── install ──────────────────────────────────────────────────────────────────
@@ -183,14 +207,19 @@ def install(
     """Questionnaire → picker → diff → confirm → install."""
     cfg = _load(config)
     p = _platform(unsupported)
+    base = None
     if yes or dry_run:
         plan = build(cfg, p, ids=ids or [], profile=profile, sections=section or [])
     else:
         from rigsmith.tui import interactive_install  # noqa: PLC0415  (Textual loads lazily)
 
-        plan = interactive_install(cfg, p, ids=ids or [], profile=profile, sections=section or [])
-        if plan is None:
+        first_run = config is None and not cfgmod.user_config().exists()
+        bases = cfgmod.available() if first_run else None
+        result = interactive_install(cfg, p, ids=ids or [], profile=profile, sections=section or [], bases=bases)
+        if result is None:
             raise typer.Exit(1)
+        plan, cfg, base = result
+    header(cfg)
     show_plan(cfg, plan, p)
     if dry_run:
         return
@@ -202,6 +231,9 @@ def install(
     show_result(res, "Installed")
     if plan.replace and not res.failed:
         show_result(runner.uninstall(cfg, plan.replace), "Replaced")
+    save = f"\nSave {base} as your config, so scan/install/uninstall use it from now on?"
+    if base and not cfgmod.user_config().exists() and typer.confirm(save, default=True):
+        console.print(f"[green]✓[/] saved {cfgmod.copy_to_user(base)} (yours to edit)")
     if res.failed:
         raise typer.Exit(1)
 
@@ -221,9 +253,10 @@ def uninstall(
         bool, typer.Option("--include-unmanaged", help="Also remove packages rigsmith didn't install.")
     ] = False,
 ) -> None:
-    """Undo what rigsmith installed, from its receipts."""
-    cfg = _load(config)
+    """Undo what rigsmith installed, from its receipts (even if it came from another config)."""
     p, state = Platform.detect(), State()
+    cfg = with_managed(_load(config), state)
+    header(cfg)
     scope = [e.id for e in select(cfg, ids=ids or [], profile=profile, sections=section or [])]
     present = {i for i in scope if include_unmanaged and status(cfg.library[i], p) != "missing"}
     candidates = [i for i in scope if state.managed(i) or i in present]
@@ -265,6 +298,37 @@ def uninstall(
     show_result(res, "Uninstalled")
     if res.failed:
         raise typer.Exit(1)
+
+
+# ── use ──────────────────────────────────────────────────────────────────────
+
+
+@app.command()
+def use(
+    source: Annotated[
+        str | None, typer.Argument(help="Preset name or path to a YAML config.", show_default=False)
+    ] = None,
+    yes: YesOpt = False,
+) -> None:
+    """Choose your config: copies a preset (or your own YAML) to ~/.config/rigsmith/config.yaml."""
+    if source is None:
+        if not sys.stdin.isatty():
+            for a in cfgmod.available():
+                console.print(f"  [bold]{a.name:<14}[/] {a.count:>3} tools  [dim]{a.description}[/]")
+            console.print("\nPick one: [bold]rigsmith use <name>[/] (or a path to your own YAML)")
+            raise typer.Exit(1)
+        from rigsmith.tui import pick_config  # noqa: PLC0415
+
+        source = pick_config(cfgmod.available())
+        if source is None:
+            raise typer.Exit(1)
+    cfg = _load(source)
+    dest = cfgmod.user_config()
+    if dest.exists() and not yes and not typer.confirm(f"Replace {dest} ({cfgmod.label(str(dest))})?", default=False):
+        raise typer.Exit(1)
+    cfgmod.copy_to_user(source)
+    console.print(f"[green]✓[/] now using {cfgmod.label(str(dest))}: {len(cfg.entries)} artifacts")
+    console.print("Next: [bold]rigsmith install[/] (or `rigsmith scan` to see where you stand)")
 
 
 # ── init ─────────────────────────────────────────────────────────────────────

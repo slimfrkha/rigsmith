@@ -48,12 +48,16 @@ and are built from sections.
 
 | Command | Reads | Does |
 |---|---|---|
+| `use` | bundled configs or a path | Copies the chosen config to `~/.config/rigsmith/config.yaml` (a copy: edit freely, never changed by upgrades). Without an argument it opens a picker (or lists the choices when there's no terminal). |
 | `init` | whole library (or `--from CONFIG`) | Scope picker → writes a forked config → optional `$EDITOR` for restructuring → validate. Installs nothing. |
 | `install` | active config | Questionnaire → picker (pre-ticked) → diff screen → confirm → run. |
 | `scan` | active config (`--all`: whole library) | Read-only table: installed / missing / n/a, managed vs pre-existing, grouped by section/subsection, profile shown. |
-| `uninstall` | active config | Picker of installed **managed** artifacts → confirm → run. |
+| `uninstall` | receipts (active config + anything managed from earlier configs) | Picker of installed **managed** artifacts → confirm → run. |
 
-`init` authors a menu. `install` orders from that menu.
+`use` picks a menu, `init` tailors one, `install` orders from it. On a first interactive `install` (no `-c`,
+no user config) the questionnaire opens with "Start from which menu?" (presets with descriptions and tool counts,
+the reference, or a YAML path) and offers to save the choice at the end. Every command prints the active config on
+its first line.
 
 ### Arguments
 

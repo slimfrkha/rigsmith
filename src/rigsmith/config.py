@@ -233,3 +233,66 @@ def fork(src: Config, entries: list[Entry], picked: list[str], profiles: dict[st
     if "answers" in doc and not answers:
         del doc["answers"]
     return doc
+
+
+# ── choosing a config (`rigsmith use`, first-run install) ────────────────────
+
+ORIGIN = "# rigsmith: copied from "
+
+
+@dataclass
+class Available:
+    name: str
+    path: Path
+    description: str
+    count: int
+
+
+def _description(path: Path) -> str:
+    for line in path.read_text().splitlines():
+        if line.startswith("#") and not line.startswith(ORIGIN):
+            return line.lstrip("# ").strip()
+    return ""
+
+
+def available() -> list[Available]:
+    """Bundled configs a user can start from: presets first, then the author's example, then everything."""
+    paths = sorted((bundled_dir() / "presets").glob("*.yaml"))
+    paths += [bundled_dir() / "example.yaml", bundled_dir() / "reference.yaml"]
+    return [Available(p.stem, p, _description(p), len(load(str(p)).entries)) for p in paths if p.is_file()]
+
+
+def origin(path: Path) -> str | None:
+    """Which config the user's copy came from, if `rigsmith use` wrote it."""
+    first = path.read_text().split("\n", 1)[0] if path.is_file() else ""
+    return first.removeprefix(ORIGIN).split(" (")[0] if first.startswith(ORIGIN) else None
+
+
+def copy_to_user(source: str) -> Path:
+    """Copy a preset or YAML file to ~/.config/rigsmith/config.yaml, comments and all."""
+    src = resolve(source)
+    name = src.stem if src.parent in (bundled_dir(), bundled_dir() / "presets") else str(src)
+    text = src.read_text()
+    if text.startswith(ORIGIN):
+        text = text.split("\n", 1)[1]
+    dest = user_config()
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    dest.write_text(f"{ORIGIN}{name} (edit freely: this copy is yours)\n{text}")
+    return dest
+
+
+def label(name: str) -> str:
+    """How a config is shown on every command's first line."""
+    path = Path(name)
+    home = str(Path.home())
+    shown = "~" + name[len(home) :] if name.startswith(home) else name
+    if path == user_config():
+        src = origin(path)
+        return f"your config ({shown}{', from ' + src if src else ''})"
+    if path.parent == bundled_dir() / "presets":
+        return f"preset {path.stem}"
+    if path == bundled_dir() / "reference.yaml" and not user_config().exists():
+        return "reference (everything); pick your own with `rigsmith use`"
+    if path.parent == bundled_dir():
+        return path.stem
+    return shown
