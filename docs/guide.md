@@ -165,8 +165,8 @@ template.
 Pin the rigsmith version **and** every answer, so a run doesn't depend on library defaults:
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/slimfrkha/rigsmith/v0.2.0/install.sh \
-  | RIGSMITH_VERSION=0.2.0 sh -s -- install -c my-config.yaml -y
+curl -fsSL https://raw.githubusercontent.com/slimfrkha/rigsmith/v0.3.0/install.sh \
+  | RIGSMITH_VERSION=0.3.0 sh -s -- install -c my-config.yaml -y
 ```
 
 Every bundled preset already pins its answers; `server` is a good start for headless machines.
