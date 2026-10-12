@@ -2,13 +2,14 @@
 
 import json
 import re
+import shlex
 import shutil
 from datetime import datetime
 from pathlib import Path
 from typing import Any
 
 from rigsmith.effects import Effect
-from rigsmith.model import Artifact, GitConfig, Platform, VSCodeSetting, render, run
+from rigsmith.model import Artifact, GitConfig, Platform, VSCodeSetting, render, run, sh_path
 
 
 def vscode_settings_path(p: Platform) -> Path:
@@ -82,6 +83,14 @@ class VSCodeSettingEffect(Effect):
             data[self.skey] = backup["value"]
         self._write(data)
 
+    def sh(self) -> list[str]:  # JSON with comments can't be edited safely in sh: say what to set instead
+        return [f'# VS Code {sh_path(self.path)}: set "{self.skey}": {json.dumps(self.value, ensure_ascii=False)}']
+
+    def undo_sh(self, backup: Any) -> list[str]:
+        if backup is None:
+            return [f'# VS Code {sh_path(self.path)}: remove "{self.skey}"']
+        return [f'# VS Code {sh_path(self.path)}: set "{self.skey}" back to {json.dumps(backup["value"])}']
+
 
 class GitConfigEffect(Effect):
     """One key in the global git config, or in another git config file (`file`)."""
@@ -118,6 +127,18 @@ class GitConfigEffect(Effect):
         path = Path(self.file).expanduser() if self.file else None
         if path and not existed and path.exists() and not run(["git", "config", *self.where, "--list"]).stdout.strip():
             path.unlink()  # we created the file and it holds no settings anymore: remove it
+
+    def _where_sh(self) -> str:
+        return f"--file {sh_path(self.file)}" if self.file else "--global"
+
+    def sh(self) -> list[str]:
+        return [f"git config {self._where_sh()} {shlex.quote(self.gkey)} {shlex.quote(self.value)}"]
+
+    def undo_sh(self, backup: Any) -> list[str]:
+        value = backup.get("value") if isinstance(backup, dict) else backup
+        if value is None:
+            return [f"git config {self._where_sh()} --unset {shlex.quote(self.gkey)} || true"]
+        return [f"git config {self._where_sh()} {shlex.quote(self.gkey)} {shlex.quote(value)}"]
 
 
 def setting_effects(art: Artifact, p: Platform, answers: dict[str, str] | None = None) -> list[Effect]:

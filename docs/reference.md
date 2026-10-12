@@ -37,6 +37,7 @@ by asking which menu to start from, and offers to save that choice as your confi
 | `-s`, `--section` | `SECTION` or `SECTION/SUB`, repeatable |
 | `-y`, `--yes` | No screens: pinned answers, then remembered ones, then defaults. Never replaces an installed role provider |
 | `--dry-run` | Print the plan and exit |
+| `--script` | Print the shell commands it would run, change nothing. For reading only: running it leaves no receipts ([why](guide.md#see-what-rigsmith-would-run)) |
 | `--unsupported` | Run on a platform rigsmith doesn't support |
 
 ### `rigsmith scan [IDS]...`
@@ -61,6 +62,7 @@ switched away from. Dependencies it pulled in go too, unless you asked for them 
 | `-y`, `--yes` | No picker, no confirmation |
 | `--dry-run` | Print what would be removed and exit |
 | `--include-unmanaged` | Also remove packages that were installed before rigsmith |
+| `--script` | Print the undo as shell commands, change nothing (for reading only) |
 | `--inactive` | Remove installed synonyms that aren't their role's active provider (see [roles](#roles)) |
 
 ### `rigsmith init`

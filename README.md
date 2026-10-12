@@ -117,6 +117,8 @@ only the shell and CLI part. Every preset pins its answers, so `-y` gives the sa
 - **Every change gets a receipt**, recording the value before and the value rigsmith left. `uninstall` undoes only
   what rigsmith did, and keeps anything you changed since.
 - **Steps that can't be undone are listed before you confirm**, such as installing Homebrew.
+- **Nothing is a black box.** `--script` prints every command an install or uninstall would run, for reading
+  ([why you shouldn't run it yourself](docs/guide.md#see-what-rigsmith-would-run)).
 - **Running it again changes nothing.** CI installs, reinstalls (expecting 0 changes) and uninstalls on real macOS
   and Ubuntu machines, and checks `~/.zshrc` comes back byte for byte.
 

@@ -4,6 +4,7 @@ import functools
 import os
 import platform as _platform
 import re
+import shlex
 import shutil
 import subprocess
 import sys
@@ -151,6 +152,16 @@ class Backend:
     def uninstall(self, snapshot: Any = None) -> None:
         raise NotImplementedError
 
+    # The same steps as shell commands, for `--script` (shown to humans; rigsmith itself runs the methods above).
+    def check_sh(self) -> str:
+        return "false"
+
+    def install_sh(self) -> list[str]:
+        return [f"# {self}: no shell equivalent, run `rigsmith install`"]
+
+    def uninstall_sh(self, snapshot: Any = None) -> list[str]:
+        return [f"# {self}: no shell equivalent, run `rigsmith uninstall`"]
+
     def __str__(self) -> str:
         return f"{self.name}:{self.pkg}"
 
@@ -258,6 +269,8 @@ class Artifact:
         src = self.source(p)
         return bool(src and src.is_installed())
 
+    post_install_sh: ClassVar[str] = ""  # the post_install step as shell, for `--script`
+
     def post_install(self) -> None:
         """Override for one-off irreversible setup (e.g. importing history)."""
 
@@ -324,6 +337,15 @@ def render(text: str, answers: dict[str, str]) -> str:
 
 
 # ── Paths ────────────────────────────────────────────────────────────────────
+
+
+def sh_path(path: str | Path) -> str:
+    """A path for a shell script: `$HOME/...` instead of the absolute home, quoted."""
+    text = str(Path(str(path)).expanduser())
+    home = str(Path.home())
+    if text == home or text.startswith(home + "/"):
+        return '"$HOME' + text[len(home) :].replace('"', '\\"') + '"'
+    return shlex.quote(text)
 
 
 def config_home() -> Path:

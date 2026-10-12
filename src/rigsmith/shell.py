@@ -38,6 +38,21 @@ class ZshrcBlock(Effect):
         text = zshrc().read_text() if zshrc().exists() else ""
         zshrc().write_text(BLOCK + text)
 
+    def sh(self) -> list[str]:
+        lines = " ".join(f"'{line}'" for line in BLOCK.splitlines())
+        return [
+            f"if ! grep -qx '{BEGIN}' \"$HOME/.zshrc\" 2>/dev/null; then",
+            f'  {{ printf \'%s\\n\' {lines}; cat "$HOME/.zshrc" 2>/dev/null || true; }} > "$HOME/.zshrc.rigsmith-tmp"',
+            '  mv "$HOME/.zshrc.rigsmith-tmp" "$HOME/.zshrc"',
+            "fi",
+        ]
+
+    def undo_sh(self, backup: Any) -> list[str]:
+        lines = [f'sed -i.rigsmith-bak \'/^{BEGIN}$/,/^{END}$/d\' "$HOME/.zshrc" && rm -f "$HOME/.zshrc.rigsmith-bak"']
+        if not (backup or {}).get("existed", True):
+            lines.append('[ -s "$HOME/.zshrc" ] || rm -f "$HOME/.zshrc"')
+        return lines
+
     def restore(self, backup: Any) -> None:
         text = zshrc().read_text()
         if text.startswith(BLOCK):

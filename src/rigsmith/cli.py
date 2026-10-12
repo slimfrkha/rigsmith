@@ -18,6 +18,7 @@ from rigsmith.config import Config, ConfigError, Entry
 from rigsmith.model import Platform, ensure_path
 from rigsmith.plan import Plan, build, dependents, inactive_providers, select, toposort, with_orphans
 from rigsmith.runner import Result, Runner, effects_for, pending, status
+from rigsmith.script import install_script, uninstall_script
 from rigsmith.shell import conflicts
 from rigsmith.state import NOOP, State
 
@@ -38,6 +39,19 @@ SectionOpt = Annotated[
 YesOpt = Annotated[bool, typer.Option("-y", "--yes", help="Non-interactive: defaults, no picker, no confirm.")]
 DryOpt = Annotated[bool, typer.Option("--dry-run", help="Show the plan and exit.")]
 UnsupportedOpt = Annotated[bool, typer.Option("--unsupported", help="Run on a platform rigsmith doesn't support.")]
+ScriptOpt = Annotated[
+    bool,
+    typer.Option(
+        "--script",
+        help="Print the shell commands this would run, and change nothing. For reading: running it yourself "
+        "leaves no receipts.",
+    ),
+]
+
+
+def as_command() -> str:
+    """The rigsmith command that does for real what a --script run shows."""
+    return shlex.join(["rigsmith", *(a for a in sys.argv[1:] if a != "--script")])
 
 
 @app.callback()
@@ -210,11 +224,16 @@ def install(
     yes: YesOpt = False,
     dry_run: DryOpt = False,
     unsupported: UnsupportedOpt = False,
+    script: ScriptOpt = False,
 ) -> None:
     """Questionnaire → picker → diff → confirm → install."""
     cfg = _load(config)
     p = _platform(unsupported)
     base = None
+    if script:
+        plan = build(cfg, p, ids=ids or [], profile=profile, sections=section or [], remembered=State().answers)
+        typer.echo(install_script(cfg, plan, p, as_command()), nl=False)
+        return
     if yes or dry_run:
         plan = build(cfg, p, ids=ids or [], profile=profile, sections=section or [], remembered=State().answers)
     else:
@@ -263,11 +282,15 @@ def uninstall(
         bool,
         typer.Option("--inactive", help="Remove installed synonyms that aren't the active provider of their role."),
     ] = False,
+    script: ScriptOpt = False,
 ) -> None:
     """Undo what rigsmith installed, from its receipts (even if it came from another config)."""
     p, state = Platform.detect(), State()
     cfg = with_managed(_load(config), state)
-    header(cfg)
+    if script:
+        dry_run = True  # never the picker, never a change
+    else:
+        header(cfg)
     scope = [e.id for e in select(cfg, ids=ids or [], profile=profile, sections=section or [])]
     if inactive:  # synonyms: keep the active provider of each role, remove the other installed ones
         found, ambiguous = inactive_providers(cfg, p, {**state.answers, **cfg.answers})
@@ -289,6 +312,9 @@ def uninstall(
     managed = [i for i in cfg.library if state.managed(i)]
     candidates = with_orphans(cfg.library, candidates, managed, state.requested, p)
     order = list(reversed(toposort(cfg.library, candidates, p)))
+    if script:
+        typer.echo(uninstall_script(cfg, order, p, include_unmanaged, as_command()), nl=False)
+        return
     if not order:
         console.print("Nothing rigsmith installed matches.")
         return

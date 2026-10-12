@@ -3,6 +3,7 @@
 import io
 import os
 import platform
+import shlex
 import shutil
 import sys
 import tarfile
@@ -12,7 +13,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
-from rigsmith.model import Backend, backend, cached, out, run
+from rigsmith.model import Backend, backend, cached, out, run, sh_path
 
 BREW_PATHS = ("/opt/homebrew/bin/brew", "/usr/local/bin/brew", "/home/linuxbrew/.linuxbrew/bin/brew")
 
@@ -44,6 +45,15 @@ class Brew(Backend):
     def uninstall(self, snapshot: Any = None) -> None:
         run([_need_brew(), "uninstall", self.pkg])
 
+    def check_sh(self) -> str:
+        return f"brew list --formula {shlex.quote(self.short)}"
+
+    def install_sh(self) -> list[str]:
+        return [f"brew install {shlex.quote(self.pkg)}"]
+
+    def uninstall_sh(self, snapshot: Any = None) -> list[str]:
+        return [f"brew uninstall {shlex.quote(self.pkg)}"]
+
 
 @backend("cask")
 class Cask(Brew):
@@ -55,6 +65,15 @@ class Cask(Brew):
 
     def uninstall(self, snapshot: Any = None) -> None:
         run([_need_brew(), "uninstall", "--cask", self.pkg])
+
+    def check_sh(self) -> str:
+        return f"brew list --cask {shlex.quote(self.short)}"
+
+    def install_sh(self) -> list[str]:
+        return [f"brew install --cask {shlex.quote(self.pkg)}"]
+
+    def uninstall_sh(self, snapshot: Any = None) -> list[str]:
+        return [f"brew uninstall --cask {shlex.quote(self.pkg)}"]
 
 
 def _need_brew() -> str:
@@ -93,6 +112,22 @@ class Apt(Backend):
     def snapshot(self) -> Any:
         return [p for p in self.pkg.split() if p in _dpkg()]
 
+    def check_sh(self) -> str:
+        return " && ".join(f"dpkg -s {shlex.quote(p)}" for p in self.pkg.split())
+
+    def install_sh(self) -> list[str]:
+        pkgs = " ".join(shlex.quote(p) for p in self.pkg.split())
+        return [
+            "sudo env DEBIAN_FRONTEND=noninteractive apt-get update -q",
+            f"sudo env DEBIAN_FRONTEND=noninteractive apt-get install -y -q {pkgs}",
+        ]
+
+    def uninstall_sh(self, snapshot: Any = None) -> list[str]:
+        mine = [p for p in self.pkg.split() if p not in (snapshot or [])]
+        if not mine:
+            return [f"# {self}: every package was there before; nothing to remove"]
+        return [f"sudo env DEBIAN_FRONTEND=noninteractive apt-get remove -y -q {' '.join(map(shlex.quote, mine))}"]
+
     def uninstall(self, snapshot: Any = None) -> None:
         mine = [p for p in self.pkg.split() if p not in (snapshot or [])]
         if mine:
@@ -129,6 +164,15 @@ class Script(Backend):
             raise RuntimeError(f"{self.pkg} has no uninstall command")
         run(self.remove_cmd)
 
+    def check_sh(self) -> str:
+        return self.check_cmd
+
+    def install_sh(self) -> list[str]:
+        return [self.install_cmd]
+
+    def uninstall_sh(self, snapshot: Any = None) -> list[str]:
+        return [self.remove_cmd] if self.remove_cmd else [f"# {self.pkg}: can't be undone"]
+
 
 @backend("git")
 @dataclass
@@ -151,6 +195,18 @@ class GitClone(Backend):
     def uninstall(self, snapshot: Any = None) -> None:
         shutil.rmtree(self.path)
 
+    def check_sh(self) -> str:
+        return f"test -d {sh_path(self.path / '.git')}"
+
+    def install_sh(self) -> list[str]:
+        return [
+            f"mkdir -p {sh_path(self.path.parent)}",
+            f"git clone --depth=1 {shlex.quote(self.pkg)} {sh_path(self.path)}",
+        ]
+
+    def uninstall_sh(self, snapshot: Any = None) -> list[str]:
+        return [f"rm -rf {sh_path(self.path)}"]
+
 
 @cached
 def _krew_list() -> frozenset[str]:
@@ -171,6 +227,15 @@ class Krew(Backend):
 
     def uninstall(self, snapshot: Any = None) -> None:
         run(["kubectl", "krew", "uninstall", self.pkg])
+
+    def check_sh(self) -> str:
+        return f"command kubectl krew list | grep -qx {shlex.quote(self.pkg)}"
+
+    def install_sh(self) -> list[str]:
+        return [f"command kubectl krew install {shlex.quote(self.pkg)}"]
+
+    def uninstall_sh(self, snapshot: Any = None) -> list[str]:
+        return [f"command kubectl krew uninstall {shlex.quote(self.pkg)}"]
 
 
 CODE_PATHS = (
@@ -210,6 +275,15 @@ class VSCodeExt(Backend):
     def uninstall(self, snapshot: Any = None) -> None:
         run([self._code(), "--uninstall-extension", self.pkg])
 
+    def check_sh(self) -> str:
+        return f"code --list-extensions | grep -qix {shlex.quote(self.pkg)}"
+
+    def install_sh(self) -> list[str]:
+        return [f"code --install-extension {shlex.quote(self.pkg)} --force"]
+
+    def uninstall_sh(self, snapshot: Any = None) -> list[str]:
+        return [f"code --uninstall-extension {shlex.quote(self.pkg)}"]
+
 
 @cached
 def _uv_tools() -> frozenset[str]:
@@ -235,6 +309,15 @@ class UvTool(Backend):
 
     def uninstall(self, snapshot: Any = None) -> None:
         run(["uv", "tool", "uninstall", self.name_only])
+
+    def check_sh(self) -> str:
+        return f"uv tool list | grep -q '^{self.name_only} '"
+
+    def install_sh(self) -> list[str]:
+        return [f"uv tool install {shlex.quote(self.pkg)}"]
+
+    def uninstall_sh(self, snapshot: Any = None) -> list[str]:
+        return [f"uv tool uninstall {shlex.quote(self.name_only)}"]
 
 
 @backend("nerdfont")
@@ -262,6 +345,23 @@ class NerdFont(Backend):
     def uninstall(self, snapshot: Any = None) -> None:
         shutil.rmtree(self.path, ignore_errors=True)
         run("fc-cache -f >/dev/null 2>&1 || true")
+
+    def check_sh(self) -> str:
+        return f"test -d {sh_path(self.path)}"
+
+    def install_sh(self) -> list[str]:
+        url = f"https://github.com/ryanoasis/nerd-fonts/releases/latest/download/{self.pkg}.zip"
+        return [
+            "tmp=$(mktemp -d)",
+            f'curl -fsSL {shlex.quote(url)} -o "$tmp/font.zip"',
+            f"mkdir -p {sh_path(self.path)}",
+            f"unzip -o -q -j \"$tmp/font.zip\" '*.[ot]tf' -d {sh_path(self.path)}",
+            'rm -rf "$tmp"',
+            "fc-cache -f >/dev/null 2>&1 || true",
+        ]
+
+    def uninstall_sh(self, snapshot: Any = None) -> list[str]:
+        return [f"rm -rf {sh_path(self.path)}", "fc-cache -f >/dev/null 2>&1 || true"]
 
 
 @backend("release")
@@ -303,3 +403,32 @@ class Release(Backend):
 
     def uninstall(self, snapshot: Any = None) -> None:
         self.dest.unlink(missing_ok=True)
+
+    def _url(self) -> str:
+        machine = platform.machine().lower()
+        arch = {"x86_64": "amd64", "amd64": "amd64", "aarch64": "arm64", "arm64": "arm64"}[machine]
+        return self.url.format(os="darwin" if sys.platform == "darwin" else "linux", arch=arch)
+
+    def check_sh(self) -> str:
+        return f"test -x {sh_path(self.dest)}"
+
+    def install_sh(self) -> list[str]:
+        url, dest = self._url(), sh_path(self.dest)
+        if url.endswith(".zip"):
+            unpack = 'unzip -o -q "$tmp/download" -d "$tmp"'
+        elif url.endswith((".tar.gz", ".tgz")):
+            unpack = 'tar -xzf "$tmp/download" -C "$tmp"'
+        else:
+            unpack = f'cp "$tmp/download" "$tmp/{self.pkg}"'
+        return [
+            "tmp=$(mktemp -d)",
+            f'curl -fsSL {shlex.quote(url)} -o "$tmp/download"',
+            unpack,
+            f"mkdir -p {sh_path(self.dest.parent)}",
+            f'find "$tmp" -type f -name {shlex.quote(self.pkg)} -exec cp {{}} {dest} \\;',
+            f"chmod +x {dest}",
+            'rm -rf "$tmp"',
+        ]
+
+    def uninstall_sh(self, snapshot: Any = None) -> list[str]:
+        return [f"rm -f {sh_path(self.dest)}"]

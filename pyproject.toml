@@ -51,7 +51,7 @@ per-file-ignores = { "tests/test_tui.py" = ["F811"] }  # pytest fixture re-expor
 
 [tool.codespell]
 skip = "uv.lock,*.svg,*.itermcolors,docs/CATALOG.md"
-ignore-words-list = "iterm"
+ignore-words-list = "iterm,ot"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

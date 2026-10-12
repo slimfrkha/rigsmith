@@ -85,6 +85,8 @@ snippet(
 
 
 class Atuin(Artifact):
+    post_install_sh = '[ -f "${ATUIN_DATA_DIR:-$HOME/.local/share/atuin}/history.db" ] || atuin import auto'
+
     def post_install(self) -> None:  # irreversible: imports existing shell history, only into an empty atuin
         db = Path(os.environ.get("ATUIN_DATA_DIR") or Path.home() / ".local/share/atuin") / "history.db"
         if not db.exists():  # an atuin that already has history would get duplicates

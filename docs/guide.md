@@ -12,6 +12,7 @@ flag or a config key? See the [reference](reference.md).
 - [Bootstrap reproducibly (CI, servers)](#bootstrap-reproducibly-ci-servers)
 - [Keep one tool per job](#keep-one-tool-per-job)
 - [Remove what rigsmith installed](#remove-what-rigsmith-installed)
+- [See what rigsmith would run](#see-what-rigsmith-would-run)
 - [Troubleshooting](#troubleshooting)
 
 ## Choose a config
@@ -204,6 +205,21 @@ rigsmith uninstall --dry-run    # see what would go
 Only what rigsmith did is undone: tools you had before stay (unless `--include-unmanaged`), and a file or setting you
 changed since install is kept, with a warning. Installing Homebrew and one-time steps like importing shell history
 can't be undone; they're listed before you confirm an install.
+
+## See what rigsmith would run
+
+> [!WARNING]
+> `--script` is for **reading**, not for installing. Running the printed script yourself (or piping it to `sh`)
+> leaves **no receipts**: rigsmith won't know about those changes, `scan` will call them pre-existing, and
+> `rigsmith uninstall` won't undo them. To make the changes, run the rigsmith command itself.
+
+```sh
+rigsmith install -s git --script     # every command an install would run, nothing changes
+rigsmith uninstall k9s --script      # the undo, read from receipts
+```
+
+The script is plain POSIX `sh`: grouped by artifact, every step guarded so it skips what's already in place.
+VS Code settings appear as comments, since JSON with comments can't be edited safely from `sh`.
 
 ## Troubleshooting
 
