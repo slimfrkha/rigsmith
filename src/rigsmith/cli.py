@@ -16,11 +16,11 @@ from rigsmith import config as cfgmod
 from rigsmith import library  # noqa: F401  (registers built-in artifacts)
 from rigsmith.config import Config, ConfigError, Entry
 from rigsmith.model import Platform, ensure_path
-from rigsmith.plan import Plan, active_providers, build, dependents, inactive_providers, select, toposort, with_orphans
+from rigsmith.plan import Plan, active_providers, build, inactive_providers, plan_removal, removal_candidates, select
 from rigsmith.runner import Result, Runner, pending, status
 from rigsmith.script import install_script, uninstall_script
 from rigsmith.shell import conflicts
-from rigsmith.state import NOOP, State
+from rigsmith.state import State
 
 app = typer.Typer(
     no_args_is_help=True,
@@ -194,7 +194,8 @@ def plan_report(cfg: Config, plan: Plan, p: Platform) -> list[str]:
             lines.append(f"  + {i}[dim]{why} — {labels[i]}[/]")
     lines += [f"  [dim]– {i}: {why}[/]" for i, why in plan.skipped.items()]
     if plan.replace:
-        lines += ["", "[yellow]Replaced (uninstalled after install):[/] " + ", ".join(plan.replace)]
+        lines += ["", "[yellow]Replaced (uninstalled after install):[/] " + ", ".join(plan.replace.order)]
+        lines += [f"  [yellow]⚠ {w}[/]" for w in plan.replace.warnings]
     if irreversible:
         lines += ["", "[yellow]Can't be undone by uninstall:[/]", *(f"  {x}" for x in irreversible)]
     pats = {i: cfg.library[i].conflicts for i in plan.order if cfg.library[i].conflicts}
@@ -265,7 +266,7 @@ def install(
     res = runner.install(cfg, plan)
     show_result(res, "Installed")
     if plan.replace and not res.failed:
-        show_result(runner.uninstall(cfg, plan.replace), "Replaced")
+        show_result(runner.uninstall(cfg, plan.replace.order), "Replaced")
     save = f"\nSave {base} as your config, so scan/install/uninstall use it from now on?"
     if base and not cfgmod.user_config().exists() and typer.confirm(save, default=True):
         console.print(f"[green]✓[/] saved {cfgmod.copy_to_user(base)} (yours to edit)")
@@ -300,17 +301,20 @@ def uninstall(
         dry_run = True  # never the picker, never a change
     else:
         header(cfg)
-    scope = [e.id for e in select(cfg, ids=ids or [], profile=profile, sections=section or [])]
-    if inactive:  # synonyms: keep the active provider of each role, remove the other installed ones
-        found, ambiguous = inactive_providers(cfg, p, {**state.answers, **cfg.answers})
-        for line in ambiguous:
-            console.print(f"[yellow]⚠ {line}[/]")
-        for i, role, winner in found:
-            console.print(f"  {i}: inactive {role} (active: {winner})")
-        candidates, include_unmanaged = [i for i, _, _ in found if i in scope], True
-    else:
-        present = {i for i in scope if include_unmanaged and status(cfg.library[i], p) != "missing"}
-        candidates = [i for i in scope if state.managed(i) or i in present]
+    candidates, warnings, notes = removal_candidates(
+        cfg,
+        p,
+        state,
+        ids=ids or [],
+        profile=profile,
+        sections=section or [],
+        include_unmanaged=include_unmanaged,
+        inactive=inactive,
+    )
+    for line in warnings:
+        console.print(f"[yellow]⚠ {line}[/]")
+    for line in notes:
+        console.print(f"  {line}")
     if not yes and not dry_run:
         from rigsmith.tui import pick_uninstall  # noqa: PLC0415
 
@@ -318,29 +322,23 @@ def uninstall(
         if picked is None:
             raise typer.Exit(1)
         candidates = picked
-    managed = [i for i in cfg.library if state.managed(i)]
-    candidates = with_orphans(cfg.library, candidates, managed, state.requested, p)
-    order = list(reversed(toposort(cfg.library, candidates, p)))
+    rm = plan_removal(cfg, p, state, candidates, include_unmanaged or inactive)
     if script:
-        typer.echo(uninstall_script(cfg, order, p, include_unmanaged, as_command()), nl=False)
+        typer.echo(uninstall_script(cfg, rm.order, p, rm.include_unmanaged, as_command()), nl=False)
         return
-    if not order:
+    if not rm.order:
         console.print("Nothing rigsmith installed matches.")
         return
-    console.print(f"[bold]To uninstall ({len(order)}):[/] " + ", ".join(order))
-    installed_elsewhere = [i for i in cfg.ids if state.managed(i) and i not in order]
-    for i in order:
-        if needed := dependents(cfg.library, i, installed_elsewhere):
-            console.print(f"[yellow]⚠ {i} is needed by: {', '.join(needed)} (they stay installed)[/]")
-    if not include_unmanaged:
-        kept = [i for i in order if any(r.op == NOOP and r.key.startswith("pkg:") for r in state.for_artifact(i))]
-        if kept:
-            console.print("[dim]Pre-existing packages left alone: " + ", ".join(kept) + "[/]")
+    console.print(f"[bold]To uninstall ({len(rm.order)}):[/] " + ", ".join(rm.order))
+    for line in rm.warnings:
+        console.print(f"[yellow]⚠ {line}[/]")
+    if rm.kept:
+        console.print("[dim]Pre-existing packages left alone: " + ", ".join(rm.kept) + "[/]")
     if dry_run:
         return
     if not yes and not typer.confirm("Proceed?", default=False):
         raise typer.Exit(1)
-    res = Runner(p, say=console.print).uninstall(cfg, order, include_unmanaged)
+    res = Runner(p, say=console.print).uninstall(cfg, rm.order, rm.include_unmanaged)
     show_result(res, "Uninstalled")
     if res.failed:
         raise typer.Exit(1)

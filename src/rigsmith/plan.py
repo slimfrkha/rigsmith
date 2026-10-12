@@ -4,6 +4,7 @@ from dataclasses import dataclass, field
 
 from rigsmith.config import Config, ConfigError, Entry
 from rigsmith.model import QUESTIONS, Artifact, Platform, Question
+from rigsmith.state import NOOP, State
 
 
 def select(
@@ -55,6 +56,14 @@ def roles_for(cfg: Config, ids: list[str]) -> dict[str, list[str]]:
 
 
 @dataclass
+class Removal:
+    order: list[str]  # artifact ids, dependents first
+    include_unmanaged: bool = False
+    warnings: list[str] = field(default_factory=list)  # removed, yet still needed by something that stays
+    kept: list[str] = field(default_factory=list)  # artifacts whose pre-existing package is left alone
+
+
+@dataclass
 class Plan:
     order: list[str]  # artifact ids, dependencies first
     reasons: dict[str, str]  # id -> "selected" | "dependency of X"
@@ -62,7 +71,7 @@ class Plan:
     env: dict[str, str]
     skipped: dict[str, str] = field(default_factory=dict)  # id -> why
     warnings: list[str] = field(default_factory=list)
-    replace: list[str] = field(default_factory=list)  # installed role providers to uninstall afterwards
+    replace: Removal | None = None  # installed role providers swapped for another one, uninstalled afterwards
 
 
 def resolve_profile(cfg: Config, profile: str | None, ids: list[str] | tuple[str, ...], answers: dict[str, str]):
@@ -231,3 +240,67 @@ def inactive_providers(
             continue
         inactive += [(m, role, active) for m in installed if m != active]
     return inactive, ambiguous
+
+
+# ── uninstall ────────────────────────────────────────────────────────────────
+
+
+def removal_candidates(
+    cfg: Config,
+    p: Platform,
+    state: State,
+    *,
+    ids: list[str] | tuple[str, ...] = (),
+    profile: str | None = None,
+    sections: list[str] | tuple[str, ...] = (),
+    include_unmanaged: bool = False,
+    inactive: bool = False,
+) -> tuple[list[str], list[str], list[str]]:
+    """What uninstall may remove, before the picker narrows it: (candidates, warnings, notes).
+
+    Managed artifacts, plus present ones with include_unmanaged; with inactive, only the installed synonyms that
+    aren't their role's active provider.
+    """
+    scope = [e.id for e in select(cfg, ids=ids, profile=profile, sections=sections)]
+    if inactive:
+        found, ambiguous = inactive_providers(cfg, p, {**state.answers, **cfg.answers})
+        notes = [f"{i}: inactive {role} (active: {winner})" for i, role, winner in found]
+        return [i for i, _, _ in found if i in scope], ambiguous, notes
+    from rigsmith.runner import status  # noqa: PLC0415  (runner imports plan)
+
+    present = {i for i in scope if include_unmanaged and status(cfg.library[i], p) != "missing"}
+    return [i for i in scope if state.managed(i) or i in present], [], []
+
+
+def plan_removal(
+    cfg: Config,
+    p: Platform,
+    state: State,
+    targets: list[str],
+    include_unmanaged: bool = False,
+    installing: list[str] | tuple[str, ...] = (),
+) -> Removal:
+    """`targets` plus the managed dependencies only they need, dependents first. `installing`: the order of a plan
+    about to run; it holds its own dependencies, so none of it is ever removed as an orphan."""
+    managed = [i for i in cfg.library if state.managed(i)]
+    out = with_orphans(cfg.library, targets, managed, state.requested | set(installing), p)
+    rm = Removal(list(reversed(toposort(cfg.library, out, p))), include_unmanaged)
+    elsewhere = [i for i in cfg.ids if state.managed(i) and i not in rm.order]
+    for i in rm.order:
+        if needed := dependents(cfg.library, i, elsewhere):
+            rm.warnings.append(f"{i} is needed by: {', '.join(needed)} (they stay installed)")
+    if not include_unmanaged:
+        rm.kept = [i for i in rm.order if any(r.op == NOOP and r.key.startswith("pkg:") for r in state.for_artifact(i))]
+    return rm
+
+
+def replacements(cfg: Config, p: Platform, state: State, picked: list[str], installing: list[str]) -> Removal | None:
+    """Installed, rigsmith-managed role providers the user swapped for another one, and what only they needed."""
+    swapped = [
+        m
+        for members in roles_for(cfg, cfg.ids).values()
+        if any(m in picked for m in members)
+        for m in members
+        if m not in picked and state.managed(m) and cfg.library[m].present(p)
+    ]
+    return plan_removal(cfg, p, state, swapped, installing=installing) if swapped else None
