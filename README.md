@@ -4,7 +4,7 @@
 [![e2e](https://github.com/slimfrkha/rigsmith/actions/workflows/e2e.yml/badge.svg)](https://github.com/slimfrkha/rigsmith/actions/workflows/e2e.yml)
 [![PyPI](https://img.shields.io/pypi/v/rigsmith)](https://pypi.org/project/rigsmith/)
 
-Set up a fresh macOS or Linux machine from a curated library of 220+ developer tools and the config that makes
+Set up a fresh macOS or Linux machine from a curated library of 230+ developer tools and the config that makes
 them work (shell, CLI, git, Python, Go, Rust, Java, JS, containers, Kubernetes, cloud, IaC, data, ML, VS Code), then
 see what's installed and undo it cleanly.
 
@@ -37,7 +37,7 @@ package manager on both, with apt for the few things that need it.
    ```
 
    ```text
-   ✓ now using your config (~/.config/rigsmith/config.yaml, from platform): 97 artifacts
+   ✓ now using your config (~/.config/rigsmith/config.yaml, from platform): 98 artifacts
    ```
 
 2. See what would change, without changing anything:
@@ -50,12 +50,12 @@ package manager on both, with apt for the few things that need it.
    config: your config (~/.config/rigsmith/config.yaml, from platform)
    Answers: profile=standard, icons=yes, aliases=yes, tui=yes, theme=catppuccin, container-runtime=colima
 
-   Already in place (29): git, eza, ripgrep, fd, bat, jq, gh, vscode, kubectx, k9s, terraform, …
+   Already in place (21): git, eza, ripgrep, fd, bat, jq, gh, vscode, docker-cli, k9s, terraform, …
 
-   To install (55):
+   To install (64):
      + zsh — snippet 10-zsh, snippet 40-zsh
      + zinit — install git:https://github.com/zdharma-continuum/zinit.git, snippet 20-zinit
-     + starship — snippet 90-starship
+     + starship — install brew:starship, snippet 90-starship
      …
    ```
 

@@ -35,8 +35,8 @@ Read the artifact fields in docs/reference.md#artifacts once if you haven't this
    `uv run ruff format && uv run ruff check && uv run ty check src && uv run pytest` green, plus `check_sources.py`.
 5. **Never install on the dev machine.** No `rigsmith install` or `uninstall`, no `tests/e2e/run.sh`. Verify with
    `uv run rigsmith scan -s SECTION`, `uv run rigsmith install ID --dry-run`, the tests, and for anything with a
-   new install path, CI: `gh workflow run e2e -f args="ID" -f os=ubuntu` (ids resolve against reference.yaml) (macOS costs 10× minutes; only when the
-   change is mac-specific).
+   new install path, CI: `gh workflow run e2e -f args="ID" -f os=ubuntu` (ids resolve against reference.yaml).
+   Use `-f os=macos` only when the change is mac-specific: macOS minutes cost 10×.
 
 ## Choosing the source
 
@@ -58,7 +58,7 @@ Illustrations of Laws 1–2: anchors, not a complete list. Reason from the laws 
 - **Section**: what the tool *is* (`kubernetes/logs`), never who uses it. That's what presets are for.
 - **Profile**: `minimal` only if most people in that section want it on day one; `comprehensive` for niche or heavy.
 - **Role**: only when two providers *can't coexist* (two prompts, two container runtimes, two `ls` alias sets).
-  Tools that merely overlap (htop/bottom) get no role. Adding a second provider to a role in a preset means
+  Tools that merely overlap (fzf/peco, kubectl/k9s) get no role. Adding a second provider to a role in a preset means
   pinning that role in the preset's `answers:`.
 - **requires**: the real dependency direction. VS Code extensions that pull in others declare it: `debugpy`
   depends on the Python extension, so `debugpy-ext` requires `python-ext`, not the reverse.
@@ -80,8 +80,8 @@ manager."` passes; `"An amazing, powerful tool for developers"` fails (says noth
 
 ## Acceptance tests (these win over the prose)
 
-- "add btop" → API check (200) → `tool("btop", "Resource monitor with graphs.", tags=["tui"])` in
-  `cli.py` under system tools → `cli/system: btop: comprehensive` in reference.yaml → catalog → gate → done.
+- "add gping" → API check (200) → `tool("gping", "Ping with a live graph. Try: gping 1.1.1.1.")` in `cli.py`
+  with the network tools → `cli/network: gping: comprehensive` in reference.yaml → catalog → gate → done.
   No snippet, no preset edits, no install.
 - "add lsd as an ls replacement" → `lsd` tool plus `lsd-aliases` (tag `aliases`). Because `eza-aliases` and
   `lsd-aliases` both alias `ls`, give **both alias artifacts** `role="ls-aliases"`, not the tools. Check presets

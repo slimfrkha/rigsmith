@@ -26,7 +26,7 @@ rigsmith use platform     # or name one
 ```
 
 ```text
-✓ now using your config (~/.config/rigsmith/config.yaml, from platform): 97 artifacts
+✓ now using your config (~/.config/rigsmith/config.yaml, from platform): 98 artifacts
 Next: rigsmith install (or `rigsmith scan` to see where you stand)
 ```
 
@@ -193,6 +193,11 @@ rigsmith uninstall --inactive             # remove them
   htop: inactive system-monitor (active: bottom)
 To uninstall (2): htop, starship
 ```
+
+To switch, pick the other provider in the `rigsmith install` picker. The summary lists the old one under
+"Replaced", and it's uninstalled after the install, together with the dependencies only it needed (colima's
+`docker-cli`, say). Uninstalling the provider you picked also forgets that pick, so the next install doesn't bring it
+back.
 
 ## Remove what rigsmith installed
 

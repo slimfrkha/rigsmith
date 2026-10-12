@@ -7,6 +7,7 @@ Every command, config key, artifact field, file and variable rigsmith uses. For 
 - [Filters](#filters)
 - [Config file](#config-file)
 - [Questions](#questions)
+- [Roles](#roles)
 - [Artifacts](#artifacts)
 - [Backends](#backends)
 - [Files and environment](#files-and-environment)
@@ -139,6 +140,10 @@ in `skip` and answers that don't fit (unknown role provider, invalid choice).
 
 Asked only when an artifact in scope references them (through a tag or its `prefs`).
 
+Each answer (and each role pick) comes from the first of: what you choose in the questionnaire, the config's
+`answers:`, what you chose last time (remembered in `state.json`), the default. Clearing an answer means the
+question's default, never last time's value: an empty `work-email` stays empty. The profile is never remembered.
+
 | Id | Kind | Answers | Effect |
 |---|---|---|---|
 | `icons` | choice | `yes` / `no` | `yes` sets `RIGSMITH_ICONS=1`; `no` skips artifacts tagged `icons` (Nerd Fonts) |
@@ -188,7 +193,7 @@ Defined in Python under [`src/rigsmith/library/`](../src/rigsmith/library), or i
 | `conflicts` | Regexes for `~/.zshrc` lines that would load the same thing twice |
 
 Snippet phases: `00` instant prompt · `05` Homebrew · `10` env and PATH · `20` plugin manager · `30` plugins · `40` completion ·
-`50` tool init · `70` aliases and functions · `80` late plugins · `90` prompt.
+`50` tool init · `70` aliases and functions · `80` late plugins (`81` after them) · `90` prompt.
 
 ## Backends
 

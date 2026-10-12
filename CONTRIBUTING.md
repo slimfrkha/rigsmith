@@ -27,8 +27,8 @@ Never run `tests/e2e/run.sh` on a machine you care about: it really installs and
    or a full `Artifact(...)` for anything else (every field is in the [reference](docs/reference.md#artifacts)).
 2. Config the tool **needs** to work (PATH, `eval "$(tool init zsh)"`) goes in its snippet. Aliases, themes and
    preferences go in a separate artifact that `requires` it, so configs can take the tool without the taste.
-3. Snippets go in `src/rigsmith/library/snippets/`, at the right phase:
-   10 env · 30 plugins · 50 tool init · 70 aliases · 90 prompt.
+3. Snippets go in `src/rigsmith/library/snippets/`, at the right
+   [phase](docs/reference.md#artifacts) (10 env · 50 tool init · 70 aliases are the usual ones).
 4. List it in [`config/reference.yaml`](config/reference.yaml) under a section, subsection and profile.
 5. Regenerate the catalog: `uv run python scripts/gen_catalog.py`.
 6. `uv run pytest` and `uv run python scripts/check_sources.py` must pass.

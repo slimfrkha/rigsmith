@@ -41,7 +41,7 @@ jobs:
         args: >-
           ${{ fromJSON(github.event_name == 'schedule'
           && '["-c python", "-c backend-go", "-c rust", "-c java", "-c web",
-               "-c data-engineer", "-c ml-engineer", "-c platform", "-c server"]'
+               "-c data-engineer", "-c ml-engineer", "-c platform", "-c ssh", "-c server"]'
           || format('["{0}"]', inputs.args || '-p minimal -s system -s shell -s cli -s git')) }}
     env:
       E2E_ARGS: ${{ matrix.args }}
