@@ -16,7 +16,7 @@ from rigsmith import config as cfgmod
 from rigsmith import library  # noqa: F401  (registers built-in artifacts)
 from rigsmith.config import Config, ConfigError, Entry
 from rigsmith.model import Platform, ensure_path
-from rigsmith.plan import Plan, build, dependents, select, toposort, with_orphans
+from rigsmith.plan import Plan, build, dependents, inactive_providers, select, toposort, with_orphans
 from rigsmith.runner import Result, Runner, effects_for, pending, status
 from rigsmith.shell import conflicts
 from rigsmith.state import NOOP, State
@@ -134,6 +134,13 @@ def scan(
         missing = [id for id in library_config(active).ids if active.entry(id) is None]
         if missing:
             console.print(f"[cyan]ℹ {len(missing)} library artifacts are not in your config — `scan --all --new`[/]")
+    inactive, ambiguous = inactive_providers(cfg, p, {**state.answers, **active.answers})
+    for i, role, winner in inactive:
+        console.print(
+            f"[yellow]⚠ {i} is installed but inactive ({role} → {winner}) — `rigsmith uninstall --inactive`[/]"
+        )
+    for line in ambiguous:
+        console.print(f"[yellow]⚠ {line}[/]")
     elsewhere = [e.id for e in with_managed(active, state).entries if active.entry(e.id) is None]
     if elsewhere and not (all or new):
         console.print(
@@ -252,14 +259,26 @@ def uninstall(
     include_unmanaged: Annotated[
         bool, typer.Option("--include-unmanaged", help="Also remove packages rigsmith didn't install.")
     ] = False,
+    inactive: Annotated[
+        bool,
+        typer.Option("--inactive", help="Remove installed synonyms that aren't the active provider of their role."),
+    ] = False,
 ) -> None:
     """Undo what rigsmith installed, from its receipts (even if it came from another config)."""
     p, state = Platform.detect(), State()
     cfg = with_managed(_load(config), state)
     header(cfg)
     scope = [e.id for e in select(cfg, ids=ids or [], profile=profile, sections=section or [])]
-    present = {i for i in scope if include_unmanaged and status(cfg.library[i], p) != "missing"}
-    candidates = [i for i in scope if state.managed(i) or i in present]
+    if inactive:  # synonyms: keep the active provider of each role, remove the other installed ones
+        found, ambiguous = inactive_providers(cfg, p, {**state.answers, **cfg.answers})
+        for line in ambiguous:
+            console.print(f"[yellow]⚠ {line}[/]")
+        for i, role, winner in found:
+            console.print(f"  {i}: inactive {role} (active: {winner})")
+        candidates, include_unmanaged = [i for i, _, _ in found if i in scope], True
+    else:
+        present = {i for i in scope if include_unmanaged and status(cfg.library[i], p) != "missing"}
+        candidates = [i for i in scope if state.managed(i) or i in present]
     if not yes and not dry_run:
         from rigsmith.tui import pick_uninstall  # noqa: PLC0415
 

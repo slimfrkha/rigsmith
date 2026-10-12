@@ -99,17 +99,17 @@ def test_custom_artifacts_are_local_to_the_config():
     cfg = menu(
         """
 profiles: [minimal]
-sections: {extra: {tools: {btop: minimal}}}
+sections: {extra: {tools: {glances: minimal}}}
 custom:
-  - {id: btop, help: Resource monitor, brew: btop, apt: btop}
+  - {id: glances, help: Resource monitor, brew: glances, apt: glances}
 """
     )
     assert config.validate(cfg) == []
-    art = cfg.library["btop"]
-    assert art.bin == "btop" and art.source(MAC).name == "brew"
+    art = cfg.library["glances"]
+    assert art.bin == "glances" and art.source(MAC).name == "brew"
     from rigsmith.model import ARTIFACTS
 
-    assert "btop" not in ARTIFACTS
+    assert "glances" not in ARTIFACTS
 
 
 def test_resolve_presets_and_user_config(home):

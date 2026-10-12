@@ -101,8 +101,10 @@ setup would reinstall what apt already provides, and `scan` would lie.
 
 Exclusive alternatives (p10k vs starship, colima vs OrbStack vs Docker Desktop) share a `role`. The picker shows them
 as radio buttons, defaulting to **the provider already installed**, else the first in config order. Replacing one
-happens only when you pick another explicitly, and `-y` never replaces an installed provider. Tools that merely
-overlap (htop and bottom) get no role; configs curate them instead.
+happens only when you pick another explicitly, and `-y` never replaces an installed provider. A role is the arbitration between synonyms: a config can list every alternative, `answers:` pins the
+active one, and `uninstall --inactive` removes installed providers that aren't active (pre-existing ones included,
+since that's the explicit intent). With several installed and nothing pinned, rigsmith reports it and doesn't guess.
+Tools that overlap but stay useful side by side (fzf and peco, kubectl and k9s) get no role.
 
 ## Questionnaire and picker
 

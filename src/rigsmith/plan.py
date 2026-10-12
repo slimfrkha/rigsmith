@@ -196,3 +196,25 @@ def with_orphans(lib: dict[str, Artifact], targets: list[str], managed: list[str
                     stack.append(dep)
                     grew = True
     return out
+
+
+def inactive_providers(
+    cfg: Config, p: Platform, answers: dict[str, str]
+) -> tuple[list[tuple[str, str, str]], list[str]]:
+    """Installed role providers that aren't the active one: [(id, role, active)], plus roles that are ambiguous.
+
+    The active provider is the one pinned in answers (config or remembered); with no pin, a lone installed provider
+    is active. Several installed and none pinned: ambiguous, so nothing is called inactive for that role.
+    """
+    inactive, ambiguous = [], []
+    for role, members in roles_for(cfg, cfg.ids).items():
+        installed = [m for m in members if cfg.library[m].sources and cfg.library[m].present(p)]
+        active = answers.get(role)
+        if active not in members:
+            active = installed[0] if len(installed) == 1 else None
+        if active is None:
+            if len(installed) > 1:
+                ambiguous.append(f"{role}: {', '.join(installed)} are all installed; pin one under answers:")
+            continue
+        inactive += [(m, role, active) for m in installed if m != active]
+    return inactive, ambiguous

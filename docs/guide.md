@@ -10,6 +10,7 @@ flag or a config key? See the [reference](reference.md).
 - [Set up per-project contexts](#set-up-per-project-contexts)
 - [Add your own tools](#add-your-own-tools)
 - [Bootstrap reproducibly (CI, servers)](#bootstrap-reproducibly-ci-servers)
+- [Keep one tool per job](#keep-one-tool-per-job)
 - [Remove what rigsmith installed](#remove-what-rigsmith-installed)
 - [Troubleshooting](#troubleshooting)
 
@@ -133,10 +134,10 @@ For a tool Homebrew or apt already packages, declare it in your config:
 
 ```yaml
 custom:
-  - {id: btop, help: "Resource monitor", brew: btop, apt: btop}
+  - {id: glances, help: "System monitor with a web UI", brew: glances, apt: glances}
 sections:
   extra:
-    tools: {btop: minimal}
+    tools: {glances: minimal}
 ```
 
 For anything else (a cask, a role, a snippet, a check), drop a Python file in `~/.config/rigsmith/artifacts/`:
@@ -168,6 +169,29 @@ curl -fsSL https://raw.githubusercontent.com/slimfrkha/rigsmith/v0.1.0/install.s
 ```
 
 Every bundled preset already pins its answers; `server` is a good start for headless machines.
+
+## Keep one tool per job
+
+Your config can list alternatives for the same job (two prompts, three system monitors); pin the one you use:
+
+```yaml
+answers:
+  prompt: p10k
+  system-monitor: bottom
+```
+
+`scan` then flags the others if they're installed, and one command removes them:
+
+```sh
+rigsmith uninstall --inactive --dry-run   # see what would go
+rigsmith uninstall --inactive             # remove them
+```
+
+```text
+  starship: inactive prompt (active: p10k)
+  htop: inactive system-monitor (active: bottom)
+To uninstall (2): htop, starship
+```
 
 ## Remove what rigsmith installed
 

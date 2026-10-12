@@ -119,7 +119,6 @@ ext("coverage-gutters", "ryanluker.vscode-coverage-gutters", "Show test coverage
 ext("remote-ssh", "ms-vscode-remote.remote-ssh", "Open folders on remote machines over SSH.")
 ext("dev-containers", "ms-vscode-remote.remote-containers", "Develop inside containers (devcontainer.json).")
 ext("liveshare", "MS-vsliveshare.vsliveshare", "Real-time collaborative editing and debugging.")
-ext("continue", "Continue.continue", "Open-source AI assistant: bring your own model.")
 ext(
     "yaml-ext",
     "redhat.vscode-yaml",

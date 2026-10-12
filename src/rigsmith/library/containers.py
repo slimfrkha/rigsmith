@@ -36,5 +36,5 @@ Artifact(
 )
 tool("dive", "Explore a docker image layer by layer and find wasted space.")
 tool("lazydocker", "Terminal UI for docker and compose: logs, stats, restart with one key.", tags=["tui"])
-snippet("docker-aliases", "d (docker), dc (compose), dps, di.", 70, requires=["docker-cli"])
+snippet("docker-aliases", "d (docker), dc (compose), dps, di. Works with any docker (Desktop, colima, engine).", 70)
 ext("docker-ext", "ms-azuretools.vscode-docker", "Dockerfiles, compose and containers in VS Code.")

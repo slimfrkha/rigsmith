@@ -26,6 +26,7 @@ tool(
 tool("ripgrep", "rg: recursive grep that respects .gitignore, extremely fast.", bin="rg")
 snippet("ripgrep-aliases", "grep → rg, plus rgi/rgl/rgc/rgh.", 70, requires=["ripgrep"], tags=["aliases"])
 tool("fd", "Simple, fast find. `fd pattern`, `fd -e py`.")
+tool("peco", "Interactive filter for any list: `ls | peco`, `kubectl get pods | peco`.")
 snippet("fd-aliases", "fdi/fdh/fde shortcuts for fd.", 70, requires=["fd"], tags=["aliases"])
 tool(
     "fzf",
@@ -79,8 +80,15 @@ tool("jq", "Slice, filter and transform JSON.")
 tool("yq", "jq for YAML (and JSON, XML, TOML).")
 
 # system
-tool("htop", "Classic interactive process viewer.", tags=["tui"])
-tool("bottom", "Graphical system monitor: CPU, memory, network, disks (`btm`).", bin="btm", tags=["tui"])
+tool("htop", "Classic interactive process viewer.", role="system-monitor", tags=["tui"])
+tool(
+    "bottom",
+    "Graphical system monitor: CPU, memory, network, disks (`btm`).",
+    bin="btm",
+    role="system-monitor",
+    tags=["tui"],
+)
+tool("btop", "Resource monitor with graphs and mouse support.", role="system-monitor", tags=["tui"])
 tool("dust", "Intuitive du: which directories eat your disk.")
 tool("duf", "Friendly df: disk usage overview.")
 tool("procs", "Modern ps with colors, tree view and search.")

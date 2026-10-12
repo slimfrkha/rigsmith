@@ -1,104 +1,61 @@
-# The author's work setup: a platform/GCP engineer who lives in zsh, k9s and VS Code.
-# A curated fork of reference.yaml, pinned so `rigsmith install -c example -y` is reproducible.
+# The author's work setup: a platform/ML engineer on GCP and AWS who lives in zsh, git, helm, k9s and Claude Code.
+# Built from a machine audit (installed tools and 27k commands of shell history). Synonyms stay listed as
+# alternatives; the active one is pinned under answers:, and `rigsmith uninstall --inactive` removes the others.
 profiles: [minimal, standard, comprehensive]
 
 sections:
   system:
-    bootstrap:
-      homebrew: minimal
-      apt-base: minimal
+    bootstrap: {homebrew: minimal, apt-base: minimal}
 
   shell:
-    core:
-      zsh: minimal
-      zinit: minimal
-    prompt:
-      p10k: minimal
+    core: {zsh: minimal, zinit: minimal}
+    prompt: {p10k: minimal, starship: comprehensive}
     plugins:
       zsh-autosuggestions: minimal
       zsh-syntax-highlighting: minimal
       zsh-completions: minimal
       zsh-history-substring-search: standard
       omz-plugins: standard
-    history:
-      atuin: minimal
-    helpers:
-      shell-aliases: minimal
-      shell-functions: minimal
-      shell-extras: standard
+    history: {atuin: minimal}
+    helpers: {shell-aliases: minimal, shell-extras: comprehensive}
 
   terminal:
-    emulator:
-      iterm2: minimal
-    fonts:
-      meslo-nf: minimal
-      jetbrains-nf: standard
-      fira-nf: comprehensive
-    theme:
-      catppuccin-iterm: minimal
+    emulator: {iterm2: minimal}
+    fonts: {meslo-nf: minimal, jetbrains-nf: standard}
+    theme: {catppuccin-iterm: minimal}
+
+  desktop:
+    windows: {rectangle: minimal}
 
   cli:
-    files:
-      eza: minimal
-      eza-aliases: minimal
-      tree: minimal
-      yazi: standard
-    search:
-      ripgrep: minimal
-      ripgrep-aliases: minimal
-      fd: minimal
-      fd-aliases: minimal
-      fzf: minimal
-    view-edit:
-      bat: minimal
-      bat-aliases: minimal
-      sd: standard
-      micro: minimal
-    navigation:
-      zoxide: minimal
-    data:
-      jq: minimal
-      yq: minimal
+    files: {eza: minimal, eza-aliases: minimal, yazi: comprehensive}
+    search: {ripgrep: minimal, ripgrep-aliases: minimal, fd: minimal, fd-aliases: minimal, fzf: minimal, peco: standard}
+    view-edit: {bat: minimal, bat-aliases: minimal, micro: minimal}
+    navigation: {zoxide: minimal}
+    data: {jq: minimal, yq: standard}
     system:
+      bottom: minimal
       htop: standard
-      bottom: standard
-      dust: standard
-      duf: standard
-      procs: standard
-      sys-aliases: standard
-    network:
-      httpie: standard
-      wget: minimal
-    docs:
-      tldr: minimal
-    misc:
-      watch: standard
-      tokei: comprehensive
-      hyperfine: comprehensive
-      thefuck: comprehensive
+      btop: comprehensive
+      sys-aliases: minimal
+      dust: minimal
+      duf: comprehensive
 
   git:
-    core:
-      git: minimal
-      gh: minimal
-      git-aliases: minimal
-      git-defaults: minimal
-      git-identities: minimal
-    ui:
-      lazygit: minimal
-      gitlens-ext: standard
-      git-graph-ext: standard
-      github-pr-ext: standard
-    diff:
-      delta: minimal
+    core: {git: minimal, gh: minimal, git-aliases: minimal, git-defaults: minimal, git-identities: minimal}
+    ui: {gitlens-ext: standard, git-graph-ext: standard, lazygit: comprehensive}
+    diff: {delta: minimal}
+    commits: {commitizen: minimal}
+
+  dev:
+    tools: {pre-commit: minimal}
+
+  ai:
+    cli: {claude-code: minimal, codex: standard}
+    vscode: {claude-code-ext: minimal}
 
   python:
-    tooling:
-      uv: minimal
-      python: minimal
-      ruff: minimal
-      ty: minimal
-      python-aliases: minimal
+    tooling: {uv: minimal, python: minimal, ruff: minimal, ty: minimal, ipython: minimal, python-aliases: minimal}
     vscode:
       python-ext: minimal
       debugpy-ext: minimal
@@ -109,13 +66,8 @@ sections:
       python-indent-ext: standard
 
   containers:
-    runtime:
-      colima: minimal
-    tools:
-      docker-cli: minimal
-      docker-aliases: minimal
-      dive: comprehensive
-      docker-ext: standard
+    runtime: {docker-desktop: minimal, colima: comprehensive}
+    tools: {docker-aliases: minimal, docker-ext: standard}
 
   kubernetes:
     core:
@@ -126,42 +78,24 @@ sections:
       helm-aliases: minimal
       k8s-ext: standard
       helm-ext: standard
-    ui:
-      k9s: minimal
-    logs:
-      stern: minimal
+    ui: {k9s: minimal}
     plugins:
-      krew: standard
-      krew-neat: standard
-      krew-tree: standard
-      krew-images: standard
-      krew-get-all: standard
-      krew-whoami: standard
-    validate:
-      kubeconform: comprehensive
-      popeye: comprehensive
-      kube-score: comprehensive
-    local:
-      kind: standard
-    gitops:
-      argocd: comprehensive
+      krew: comprehensive
+      krew-neat: comprehensive
+      krew-tree: comprehensive
+      krew-images: comprehensive
+      krew-get-all: comprehensive
+      krew-whoami: comprehensive
 
   cloud:
-    gcp:
-      gcloud: minimal
-      gke-auth-plugin: minimal
-      gcp-aliases: minimal
-      cloudcode-ext: comprehensive
+    gcp: {gcloud: minimal, gke-auth-plugin: minimal, gcp-aliases: minimal}
+    aws: {awscli: minimal}
 
   iac:
-    terraform:
-      terraform: minimal
-      tflint: standard
-      terraform-aliases: minimal
-      terraform-ext: standard
-      terragrunt: standard
-      trivy: standard
-      infracost: standard
+    terraform: {terraform: standard, terraform-aliases: standard, terraform-ext: standard}
+
+  ml:
+    models: {huggingface-cli: standard}
 
   editor:
     vscode:
@@ -178,22 +112,21 @@ sections:
       bookmarks: standard
       advanced-new-file: standard
       fileutils: standard
-    config-files:
-      yaml-ext: minimal
-      toml-ext: minimal
-      dotenv-ext: standard
-    remote:
-      remote-ssh: standard
-      dev-containers: standard
+      coverage-gutters: standard
+    config-files: {yaml-ext: minimal, toml-ext: minimal, dotenv-ext: standard}
+    remote: {remote-ssh: standard, dev-containers: standard, liveshare: comprehensive}
+
+  web:
+    tooling: {node: standard}
+    api: {rest-client: standard}
 
   data:
-    files:
-      rainbow-csv: standard
+    files: {rainbow-csv: standard}
+    databases: {sqltools: standard}
 
   docs:
-    markdown:
-      markdown-all-in-one: standard
-      markdownlint: standard
+    markdown: {markdown-all-in-one: standard, markdownlint: standard}
+    diagrams: {drawio: standard}
 
   fun:
     terminal:
@@ -203,15 +136,15 @@ sections:
       figlet: comprehensive
       cowsay: comprehensive
       pipes-sh: comprehensive
-      sl: comprehensive
       fun-aliases: comprehensive
 
 answers:
   profile: standard
   prompt: p10k
-  editor: micro
-  container-runtime: colima
+  container-runtime: docker-desktop
+  system-monitor: bottom
   terminal: iterm2
+  editor: micro
   icons: "yes"
   aliases: "yes"
   tui: "yes"

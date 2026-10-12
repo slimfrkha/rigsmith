@@ -1,15 +1,14 @@
-# gc gcloud · gcfgl config list · gsetp/gsetr/gsetz set project/region/zone · gpl projects list
+# gcfgl config list · gsetp/gsetr/gsetz set project/region/zone · gcpl projects list
 # gcel / gcess  compute instances list / ssh · gkecl / gkecr  GKE clusters list / get-credentials
 # grun / grunl / grund  Cloud Run · gfn functions · gsl / gscp gsutil · bql / bqq BigQuery
 # gproj      fuzzy-switch the active project
 # gkecreds   fuzzy-pick a GKE cluster and fetch credentials
-alias gc='gcloud'
 alias gcfg='gcloud config'
 alias gcfgl='gcloud config list'
 alias gsetp='gcloud config set project'
 alias gsetr='gcloud config set compute/region'
 alias gsetz='gcloud config set compute/zone'
-alias gpl='gcloud projects list'
+alias gcpl='gcloud projects list'
 alias gcel='gcloud compute instances list'
 alias gcess='gcloud compute ssh'
 alias gkecl='gcloud container clusters list'

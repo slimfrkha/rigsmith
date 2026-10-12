@@ -1,11 +1,13 @@
 """Python with the Astral stack: uv, ruff, ty, and the VS Code side of it."""
 
+from rigsmith.backends import UvTool
 from rigsmith.library._util import ext, snippet, tool
 from rigsmith.model import VSCodeSetting
 
 tool("uv", "Astral's uv: Python versions, venvs, dependencies and tools, extremely fast. `uv init`, `uv run`.")
 tool("python", "Python 3 from Homebrew (uv can also manage Python versions per project).", bin="python3")
 tool("ruff", "Astral's ruff: linter + formatter replacing flake8, isort and black. `ruff check`, `ruff format`.")
+tool("ipython", "The rich interactive Python shell, as an isolated uv tool.", sources=[UvTool("ipython")])
 tool("ty", "Astral's ty: a very fast Python type checker and language server. `ty check`.")
 snippet(
     "python-aliases",

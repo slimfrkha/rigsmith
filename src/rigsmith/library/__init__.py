@@ -1,12 +1,14 @@
 """Built-in library. Importing it registers every artifact and question."""
 
 from rigsmith.library import (  # noqa: F401
+    ai,
     backend,
     cli,
     cloud,
     containers,
     core,
     data,
+    desktop,
     dev,
     docs,
     editor,

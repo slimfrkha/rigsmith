@@ -61,6 +61,7 @@ switched away from. Dependencies it pulled in go too, unless you asked for them 
 | `-y`, `--yes` | No picker, no confirmation |
 | `--dry-run` | Print what would be removed and exit |
 | `--include-unmanaged` | Also remove packages that were installed before rigsmith |
+| `--inactive` | Remove installed synonyms that aren't their role's active provider (see [roles](#roles)) |
 
 ### `rigsmith init`
 
@@ -116,7 +117,7 @@ questions:
   skip: [fun]
 
 custom:
-  - {id: btop, help: "Resource monitor", brew: btop, apt: btop}
+  - {id: glances, help: "System monitor with a web UI", brew: glances, apt: glances}
 ```
 
 | Key | Type | Description |
@@ -145,7 +146,21 @@ Asked only when an artifact in scope references them (through a tag or its `pref
 | `work-dir` | text | a folder (default `~/work/`) | Used by `git-identities`; a trailing `/` is added |
 | `work-email` | text | an email (default empty) | Used by `git-identities`; empty skips the email setting |
 
-Roles with two or more providers in scope (prompt, editor, terminal, container runtime…) are asked too.
+## Roles
+
+Synonyms: tools that do the same job, of which you keep one active. Every provider can stay in your config; the
+active one is pinned under `answers:` (or picked in the questionnaire), and the others shouldn't be installed.
+
+| Role | Providers in the library |
+|---|---|
+| `prompt` | `p10k`, `starship` |
+| `editor` | `micro`, `neovim`, `helix` |
+| `terminal` | `iterm2`, `ghostty` |
+| `container-runtime` | `colima`, `orbstack`, `docker-desktop`, `docker-engine` |
+| `system-monitor` | `htop`, `bottom`, `btop` |
+
+`scan` warns about installed providers that aren't active, and `uninstall --inactive` removes them, including ones
+installed before rigsmith. With several installed and none pinned, rigsmith doesn't guess: it asks you to pin one.
 
 ## Artifacts
 

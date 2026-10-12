@@ -17,7 +17,7 @@ sections:
     view-edit: {bat: minimal, micro: minimal}
     navigation: {zoxide: minimal}
     data: {jq: minimal, yq: standard}
-    system: {htop: minimal, bottom: standard, dust: minimal, duf: minimal, procs: standard}
+    system: {htop: minimal, dust: minimal, duf: minimal, procs: standard}
     network: {httpie: standard, wget: minimal}
     docs: {tldr: standard}
   git:

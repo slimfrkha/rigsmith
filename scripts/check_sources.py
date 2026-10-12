@@ -3,6 +3,7 @@
 import json
 import subprocess
 import sys
+import time
 import urllib.error
 import urllib.request
 
@@ -15,13 +16,27 @@ casks = sorted({s.pkg for a in ARTIFACTS.values() for s in a.sources if type(s) 
 bad = []
 
 
+def fetch_json(url: str, attempts: int = 3) -> dict:
+    """GET JSON, retrying network hiccups (timeouts, resets); HTTP errors like 404 are not retried."""
+    for i in range(attempts):
+        try:
+            with urllib.request.urlopen(url, timeout=30) as resp:
+                return json.load(resp)
+        except urllib.error.HTTPError:
+            raise
+        except urllib.error.URLError, TimeoutError, ConnectionError:
+            if i == attempts - 1:
+                raise
+            time.sleep(2 * (i + 1))
+    raise AssertionError("unreachable")
+
+
 def exists(kind: str, name: str) -> bool:
     """Ask the live formulae.brew.sh API (local brew metadata can be stale). Taps are checked with brew."""
     if "/" in name:
         return subprocess.run(["brew", "info", "--json=v2", f"--{kind}", name], capture_output=True).returncode == 0
     try:
-        with urllib.request.urlopen(f"https://formulae.brew.sh/api/{kind}/{name}.json", timeout=30) as resp:
-            data = json.load(resp)
+        data = fetch_json(f"https://formulae.brew.sh/api/{kind}/{name}.json")
     except urllib.error.HTTPError as e:
         if e.code != 404:
             raise

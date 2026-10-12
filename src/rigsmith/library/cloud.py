@@ -36,7 +36,7 @@ Artifact(
 )
 snippet(
     "gcp-aliases",
-    "gcloud shortcuts (gsetp, gkecl, grun…) plus fuzzy gproj (switch project) and gkecreds (cluster credentials).",
+    "gcloud shortcuts (gsetp, gcpl, gkecl, grun…), fuzzy gproj (switch project), gkecreds (cluster credentials).",
     70,
     requires=["gcloud"],
 )

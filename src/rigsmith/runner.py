@@ -21,7 +21,7 @@ from rigsmith.effects import (
     PostInstallEffect,
     snippet_effects,
 )
-from rigsmith.model import QUESTIONS, Artifact, Platform, state_home
+from rigsmith.model import Artifact, Platform, state_home
 from rigsmith.plan import Plan
 from rigsmith.settings import GitConfigEffect, setting_effects
 from rigsmith.shell import CORE, ZshrcBlock, core_effects, has_snippets
@@ -50,6 +50,8 @@ def status(art: Artifact, p: Platform, answers: dict[str, str] | None = None) ->
     if not art.available(p):
         return "n/a"
     done = [e.current() == e.desired() for e in effects_for(art, p, answers) if e.inspectable]
+    if not done:  # every effect skipped (e.g. its questions aren't answered yet): nothing is in place
+        return "missing"
     return "installed" if all(done) else "partial" if any(done) else "missing"
 
 
@@ -89,7 +91,7 @@ class Runner:
         res, order = Result(), plan.order
         self.state.requested |= {i for i, why in plan.reasons.items() if why == "selected"}
         todo = {i: pending(cfg.library[i], self.p, self.state, plan.answers) for i in order}
-        self.state.answers.update({k: v for k, v in plan.answers.items() if k in QUESTIONS})
+        self.state.answers.update({k: v for k, v in plan.answers.items() if k != "profile"})
         # packages missing when the run starts: if one appears before its turn, this run brought it in
         self._absent_at_start = {e.key for effs in todo.values() for e in effs if isinstance(e, PackageEffect)}
         with self._log("install"):
@@ -203,6 +205,11 @@ class Runner:
                 elif cur is not None:
                     res.warnings.append(f"{e.label}: changed since install, kept")
             self.state.drop(r.key)
+        if include_unmanaged:  # installed before rigsmith and never touched by it: no receipt to replay
+            for e in effs.values():
+                if isinstance(e, PackageEffect) and not self.state.get(e.key) and e.current() == e.desired():
+                    e.restore(None)
+                    changed += 1
         return changed
 
     def _log(self, what: str):

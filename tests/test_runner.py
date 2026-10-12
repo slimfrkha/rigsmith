@@ -5,7 +5,7 @@ from dataclasses import dataclass
 
 import pytest
 
-from rigsmith import config
+from rigsmith import config, library  # noqa: F401  (registers built-in artifacts)
 from rigsmith.model import Artifact, Backend, Platform, Snippet, VSCodeSetting, backend
 from rigsmith.plan import build
 from rigsmith.runner import Runner, status
@@ -270,3 +270,26 @@ def test_orphans_behind_a_preexisting_dependency_are_removed_too(cfg):
     managed = [i for i in cfg.library if st.managed(i)]
     assert "beta" not in managed and "alpha" in managed
     assert with_orphans(cfg.library, ["hooked"], managed, st.requested, P) == ["hooked", "alpha"]
+
+
+def test_inactive_role_providers_are_found_by_pin_or_by_being_alone(cfg):
+    from rigsmith.plan import inactive_providers
+
+    INSTALLED.update({"p1", "p2"})
+    assert inactive_providers(cfg, P, {"prompt": "p1"}) == ([("p2", "prompt", "p1")], [])
+    found, ambiguous = inactive_providers(cfg, P, {})
+    assert found == [] and "p1, p2 are all installed" in ambiguous[0]  # no pin: don't guess
+    INSTALLED.discard("p1")
+    assert inactive_providers(cfg, P, {}) == ([], [])  # one installed, nothing pinned: it's the active one
+
+
+def test_unmanaged_uninstall_removes_tools_rigsmith_never_touched(cfg):
+    INSTALLED.add("p2")  # installed outside rigsmith, no receipt at all
+    res = uninstall(cfg, ["p2"], include_unmanaged=True)
+    assert res.changes == 1 and "p2" not in INSTALLED
+
+
+def test_an_artifact_with_nothing_to_do_yet_is_missing_not_installed():
+    from rigsmith.model import ARTIFACTS
+
+    assert status(ARTIFACTS["git-identities"], P, {}) == "missing"  # no work folder answered yet

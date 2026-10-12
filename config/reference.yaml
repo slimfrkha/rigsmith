@@ -50,6 +50,7 @@ sections:
       ripgrep-aliases: minimal
       fd: minimal
       fd-aliases: standard
+      peco: comprehensive
       fzf: minimal
     view-edit:
       bat: minimal
@@ -66,6 +67,7 @@ sections:
     system:
       htop: standard
       bottom: comprehensive
+      btop: comprehensive
       dust: standard
       duf: standard
       procs: comprehensive
@@ -95,6 +97,8 @@ sections:
       github-pr-ext: comprehensive
     diff:
       delta: standard
+    commits:
+      commitizen: comprehensive
 
   dev:
     tools:
@@ -111,6 +115,7 @@ sections:
       python: minimal
       ruff: standard
       ty: standard
+      ipython: standard
       python-aliases: standard
     vscode:
       python-ext: minimal
@@ -249,8 +254,18 @@ sections:
       remote-ssh: standard
       dev-containers: standard
       liveshare: comprehensive
-    ai:
+
+  ai:
+    cli:
+      claude-code: standard
+      codex: comprehensive
+    vscode:
+      claude-code-ext: standard
       continue: comprehensive
+
+  desktop:
+    windows:
+      rectangle: standard
 
   web:
     tooling:

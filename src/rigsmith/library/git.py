@@ -46,6 +46,11 @@ Artifact(
     ],
 )
 tool(
+    "commitizen",
+    "Conventional commits made easy to follow: `cz commit`, `cz bump` for versions and changelogs.",
+    bin="cz",
+)
+tool(
     "delta",
     "Beautiful git diffs: syntax highlighting, side-by-side, line numbers. Becomes git's pager.",
     brew="git-delta",
