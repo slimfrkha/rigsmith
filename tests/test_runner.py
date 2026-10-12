@@ -308,3 +308,15 @@ def test_atuin_never_reimports_into_an_existing_history(home, monkeypatch):
     db.write_bytes(b"x")
     ARTIFACTS["atuin"].post_install()
     assert calls == ["atuin import auto"]  # existing history: no duplicates
+
+
+def test_installing_one_artifact_keeps_everyone_elses_preferences(cfg, home):
+    from rigsmith.model import Snippet
+
+    cfg.library["gamma"].shell = [Snippet("zoxide.zsh", 50)]
+    cfg.library["gamma"].prefs = ["icons"]
+    install(cfg, ids=["gamma"], answers={"icons": "yes"})
+    prefs = home / ".config/rigsmith/shell.d/01-rigsmith-prefs.zsh"
+    assert "RIGSMITH_ICONS=1" in prefs.read_text()
+    install(cfg, ids=["alpha"])  # no question in this run
+    assert "RIGSMITH_ICONS=1" in prefs.read_text()

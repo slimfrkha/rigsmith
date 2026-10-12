@@ -21,7 +21,7 @@ from rigsmith.effects import (
     PostInstallEffect,
     snippet_effects,
 )
-from rigsmith.model import Artifact, Platform, state_home
+from rigsmith.model import QUESTIONS, Artifact, Platform, state_home
 from rigsmith.plan import Plan
 from rigsmith.settings import GitConfigEffect, setting_effects
 from rigsmith.shell import CORE, ZshrcBlock, core_effects, has_snippets
@@ -120,7 +120,7 @@ class Runner:
                     res.notes += art.notes
                 self.say(f"[{n}/{len(order)}] ✓ {i}" + (f" ({changed} changes)" if changed else ""))
             if has_snippets():
-                res.changes += sum(self._apply(e, res) for e in core_effects(plan.env))
+                res.changes += sum(self._apply(e, res) for e in core_effects(prefs_env(self.state.answers)))
             self.state.save()
         return res
 
@@ -229,6 +229,16 @@ class _LogContext:
         if model.LOG:
             model.LOG.close()
         model.LOG = None
+
+
+def prefs_env(answers: dict[str, str]) -> dict[str, str]:
+    """Environment for every remembered question answer, not just this run's: installing one artifact must not
+    drop the preferences other installed snippets read (icons, theme)."""
+    env: dict[str, str] = {}
+    for qid, answer in answers.items():
+        if qid in QUESTIONS:
+            env.update(QUESTIONS[qid].env(answer))
+    return env
 
 
 def generic_effect(r: Receipt) -> Effect | None:
