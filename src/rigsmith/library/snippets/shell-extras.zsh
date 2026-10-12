@@ -1,11 +1,12 @@
 # note [TEXT]  append to ~/notes/quick-notes.md (no args: open the folder)
-# wttr [CITY]  weather
+# wttr [CITY]  weather (also: weather)
 # cheat CMD    tldr, falling back to cheat.sh
 note() {
   mkdir -p ~/notes
   if (( $# )); then echo "$(date '+%Y-%m-%d %H:%M'): $*" >> ~/notes/quick-notes.md; else ${EDITOR:-vi} ~/notes; fi
 }
 wttr() { curl -s "wttr.in/${1:-}"; }
+alias weather='wttr'
 cheat() { tldr "$1" 2>/dev/null || curl -s "cheat.sh/$1"; }
 
 alias myip='curl -s https://ipinfo.io/ip && echo'
