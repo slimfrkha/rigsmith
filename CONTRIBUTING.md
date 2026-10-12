@@ -4,6 +4,7 @@
 
 ```sh
 uv sync
+uv run pre-commit install                  # ruff, codespell and hygiene hooks on every commit
 uv run pytest                              # unit, library lint, CLI and TUI tests: never touch your machine
 uv run ruff check . && uv run ruff format --check . && uv run ty check src
 uv run python scripts/check_sources.py     # every brew name and VS Code extension id exists (network)

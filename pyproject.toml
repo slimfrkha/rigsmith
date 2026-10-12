@@ -24,7 +24,12 @@ dependencies = [
 rigsmith = "rigsmith.cli:main"
 
 [dependency-groups]
-dev = ["pytest>=8", "ruff>=0.8", "ty>=0.0.1a1"]
+dev = [
+    "pre-commit>=4.6.2",
+    "pytest>=8",
+    "ruff>=0.8",
+    "ty>=0.0.1a1",
+]
 
 [build-system]
 requires = ["hatchling"]
@@ -43,6 +48,10 @@ line-length = 120
 select = ["E", "F", "I", "UP", "B", "SIM"]
 ignore = ["SIM300"]
 per-file-ignores = { "tests/test_tui.py" = ["F811"] }  # pytest fixture re-exported from test_runner
+
+[tool.codespell]
+skip = "uv.lock,*.svg,*.itermcolors,docs/CATALOG.md"
+ignore-words-list = "iterm"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

@@ -1,0 +1,46 @@
+# Pre-commit hooks: the fast, auto-fixing subset of the dev gate.
+# ty + pytest are deliberately NOT here; they run in CI so hooks stay fast.
+# Install once with: uv run pre-commit install
+default_install_hook_types: [pre-commit]
+exclude: ^(docs/screenshots/|src/rigsmith/library/files/)
+
+repos:
+  # ruff via `uv run` so hooks use the exact version pinned in uv.lock (no mirror drift).
+  - repo: local
+    hooks:
+      - id: ruff-check
+        name: ruff check --fix
+        entry: uv run ruff check --fix --force-exclude
+        language: system
+        types_or: [python, pyi]
+        require_serial: true
+      - id: ruff-format
+        name: ruff format
+        entry: uv run ruff format --force-exclude
+        language: system
+        types_or: [python, pyi]
+        require_serial: true
+      - id: catalog
+        name: docs/CATALOG.md is up to date
+        entry: uv run python scripts/gen_catalog.py --check
+        language: system
+        files: ^(src/rigsmith/library/|config/reference\.yaml|scripts/gen_catalog\.py)
+        pass_filenames: false
+
+  - repo: https://github.com/codespell-project/codespell
+    rev: v2.4.1
+    hooks:
+      - id: codespell
+        additional_dependencies: [tomli]
+
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+      - id: check-toml
+      - id: check-ast
+      - id: check-merge-conflict
+      - id: check-added-large-files
+      - id: check-executables-have-shebangs
