@@ -26,7 +26,7 @@ jobs:
       E2E_ARGS: ${{ inputs.args || '-p minimal -s system -s shell -s cli -s git' }}
     steps:
       - uses: actions/checkout@v7
-      - uses: astral-sh/setup-uv@v6
+      - uses: astral-sh/setup-uv@v7
       - run: tests/e2e/run.sh
 
   ubuntu:

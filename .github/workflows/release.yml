@@ -13,7 +13,7 @@ jobs:
       contents: write
     steps:
       - uses: actions/checkout@v7
-      - uses: astral-sh/setup-uv@v6
+      - uses: astral-sh/setup-uv@v7
       - name: tag matches pyproject version
         run: test "v$(uv version --short)" = "$GITHUB_REF_NAME"
       - run: uv build
